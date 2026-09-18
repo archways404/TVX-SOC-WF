@@ -16,7 +16,7 @@ import leaderboardRoutes from './routes/leaderboard.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 
 export async function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, trustProxy: true });
 
   await app.register(cors, {
     origin: env.corsOrigins,
