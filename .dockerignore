@@ -1,0 +1,9 @@
+node_modules
+server/node_modules
+web/node_modules
+web/dist
+.git
+.env
+.env.*
+!*.env.example
+npm-debug.log*
