@@ -13,7 +13,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json server/package.json
 COPY web/package.json web/package.json
-RUN npm ci
+# Forced explicitly: some hosting platforms (e.g. Coolify) inject
+# NODE_ENV=production into every RUN step when it's set as a runtime env
+# var, which makes npm skip devDependencies — breaking this install, since
+# vite/tailwind/etc. live there. The build stage always needs devDependencies.
+RUN NODE_ENV=development npm ci
 
 COPY server ./server
 COPY web ./web
@@ -28,7 +32,7 @@ ARG VITE_API_URL=""
 ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-RUN npm run build --workspace web
+RUN NODE_ENV=development npm run build --workspace web
 
 RUN npm prune --omit=dev
 
