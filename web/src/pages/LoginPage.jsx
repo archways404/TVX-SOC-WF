@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { Coffee, Trophy } from 'lucide-react';
+import { Coffee } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Leaderboard } from '@/components/Leaderboard';
@@ -12,25 +12,28 @@ export function LoginPage() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[minmax(0,360px)_1fr] lg:items-start">
-      <Card className="order-1">
-        <CardHeader className="items-center pb-4 text-center">
-          <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Coffee className="h-6 w-6" />
-          </span>
-          <CardTitle className="text-2xl">Fika Friday</CardTitle>
-          <CardDescription>Sign in with your Telavox Google account to guess this week&apos;s fika.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center pb-8">
-          <GoogleSignInButton />
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      <div className="flex justify-end">
+        <Card className="w-full max-w-xs">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Sign in</CardTitle>
+            <CardDescription>Use your Telavox Google account</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center pb-5 pt-0">
+            <GoogleSignInButton />
+          </CardContent>
+        </Card>
+      </div>
 
-      <div className="order-2 space-y-3">
-        <div className="flex items-center gap-2 px-1 text-sm font-medium text-muted-foreground lg:hidden">
-          <Trophy className="h-4 w-4" />
-          Current standings
-        </div>
+      <div className="mx-auto flex max-w-md flex-col items-center gap-2 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Coffee className="h-7 w-7" />
+        </span>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Fika Friday</h1>
+        <p className="text-sm text-muted-foreground">Guess the fika, climb the leaderboard.</p>
+      </div>
+
+      <div className="mx-auto max-w-2xl">
         <Leaderboard />
       </div>
     </div>

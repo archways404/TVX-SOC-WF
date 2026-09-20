@@ -3,7 +3,7 @@ import { Coffee, History, LogOut, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { cn } from '@/lib/utils';
+import { cn, formatShortName } from '@/lib/utils';
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
@@ -63,7 +63,7 @@ function Nav() {
           <ThemeToggle />
           {user && (
             <>
-              <span className="hidden text-sm font-medium sm:inline">{user.name}</span>
+              <span className="hidden text-sm font-medium sm:inline">{formatShortName(user.name)}</span>
               <Button variant="outline" size="sm" onClick={logout} className="gap-1.5">
                 <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Sign out</span>
