@@ -104,6 +104,36 @@ export async function gradeGuess({ eventId, guessId, categoryCorrect, descriptio
   return getEventWithGuesses(eventId);
 }
 
+/**
+ * Lets an admin credit a user who never submitted a guess for this event
+ * (forgot to play, joined late, a manual bonus, etc.). Creates the guess
+ * row, then grades it through the normal path so points/graded_by stay
+ * consistent with every other guess.
+ */
+export async function addManualGuess({ eventId, userId, categoryId, description, categoryCorrect, descriptionCorrect, pointsOverride }) {
+  const event = await getEvent(eventId);
+  if (!event) throw new Error('Event not found');
+
+  const [existing] = await pool.query(
+    'SELECT id FROM guesses WHERE fika_event_id = ? AND user_id = ?',
+    [eventId, userId],
+  );
+  if (existing[0]) throw new Error('This player already has a guess for this event');
+
+  const [result] = await pool.query(
+    'INSERT INTO guesses (fika_event_id, user_id, category_id, description) VALUES (?, ?, ?, ?)',
+    [eventId, userId, categoryId ?? null, description?.trim() || '(added by admin — no guess submitted)'],
+  );
+
+  return gradeGuess({
+    eventId,
+    guessId: result.insertId,
+    categoryCorrect: Boolean(categoryCorrect),
+    descriptionCorrect: Boolean(descriptionCorrect),
+    pointsOverride,
+  });
+}
+
 /** Admin correcting the raw content of a guess (typo fixes, wrong category, etc.). */
 export async function updateGuessContent({ eventId, guessId, categoryId, description }) {
   const [rows] = await pool.query('SELECT * FROM guesses WHERE id = ? AND fika_event_id = ?', [guessId, eventId]);

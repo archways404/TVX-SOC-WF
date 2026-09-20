@@ -5,6 +5,7 @@ import {
   submitGuess,
   listCategories,
   listPastEvents,
+  listGuessesForEvent,
 } from '../services/fikaService.js';
 import { isWithinWindow } from '../utils/time.js';
 
@@ -46,7 +47,24 @@ export default async function fikaRoutes(fastify) {
     const withGuesses = await Promise.all(
       events.map(async (event) => {
         const guess = await getUserGuessForEvent(event.id, request.user.id);
-        return describeEventForUser(event, guess);
+        const described = describeEventForUser(event, guess);
+        // Revealed events are never sensitive — show everyone's guess so
+        // players can see who nailed it and how the points shook out.
+        const allGuesses = await listGuessesForEvent(event.id);
+        return {
+          ...described,
+          guesses: allGuesses.map((g) => ({
+            userId: g.user_id,
+            userName: g.user_name,
+            isMe: g.user_id === request.user.id,
+            categoryId: g.category_id,
+            categoryLabel: g.category_label,
+            description: g.description,
+            categoryCorrect: g.category_correct === null ? null : Boolean(g.category_correct),
+            descriptionCorrect: g.description_correct === null ? null : Boolean(g.description_correct),
+            pointsAwarded: g.points_awarded,
+          })),
+        };
       }),
     );
     return withGuesses;

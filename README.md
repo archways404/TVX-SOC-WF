@@ -73,8 +73,18 @@ running leaderboard.
   delete a guess, delete an entire event, and reopen a finalized ("scored")
   event to keep correcting it — nothing on `/admin` is ever permanently
   locked in except by admin action.
+- Admins can award points to someone who never submitted a guess at all
+  (the "Player without a guess" form on `/admin`) — it creates a guess row
+  for them so they show up in grading and the leaderboard like anyone else.
+  Only registered users (i.e. people who've signed in at least once) can be
+  picked, since the leaderboard is keyed off the `users` table.
 - `/api/leaderboard` reads from the `leaderboard` SQL view, which sums
-  `points_awarded` per user.
+  `points_awarded` per user. `/scoreboard` is a dedicated full-screen view of
+  it (nav bar or wall display) with a staggered reveal animation — 3rd place
+  fades in, then 2nd, then 1st lands last with a glow + confetti flourish —
+  and everyone outside the top 3 listed plainly below. It polls
+  `/api/leaderboard` every 60s so a screen left open stays current without
+  replaying the entrance animation.
 
 ## n8n AI grading integration
 

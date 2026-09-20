@@ -28,3 +28,8 @@ export async function getUserById(id) {
   const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
   return rows[0] ?? null;
 }
+
+export async function listUsers() {
+  const [rows] = await pool.query('SELECT id, name, email, avatar_url, role FROM users ORDER BY name ASC');
+  return rows;
+}

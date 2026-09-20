@@ -77,6 +77,26 @@ export async function submitGuess({ eventId, userId, categoryId, description }) 
   return getUserGuessForEvent(eventId, userId);
 }
 
+/**
+ * Everyone's guesses for a revealed event — the player-facing "who guessed
+ * what" view on /history. No email addresses here (unlike the admin
+ * version), and ordered best-score-first so it reads like a mini leaderboard
+ * for that week.
+ */
+export async function listGuessesForEvent(eventId) {
+  const [rows] = await pool.query(
+    `SELECT g.id, g.user_id, u.name AS user_name, g.category_id, c.label AS category_label,
+            g.description, g.category_correct, g.description_correct, g.points_awarded
+     FROM guesses g
+     JOIN users u ON u.id = g.user_id
+     LEFT JOIN fika_categories c ON c.id = g.category_id
+     WHERE g.fika_event_id = ?
+     ORDER BY g.points_awarded DESC, u.name ASC`,
+    [eventId],
+  );
+  return rows;
+}
+
 export async function listPastEvents(limit = 20) {
   const [rows] = await pool.query(
     `SELECT e.*, c.label AS actual_category_label

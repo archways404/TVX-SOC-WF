@@ -4,6 +4,7 @@ import {
   getEventWithGuesses,
   revealEvent,
   gradeGuess,
+  addManualGuess,
   updateGuessContent,
   deleteGuess,
   deleteEvent,
@@ -11,6 +12,7 @@ import {
   reopenEvent,
   requestAiGrading,
 } from '../services/scoringService.js';
+import { listUsers } from '../services/userService.js';
 
 export default async function adminRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticate);
@@ -18,6 +20,10 @@ export default async function adminRoutes(fastify) {
 
   fastify.get('/api/admin/events', async () => {
     return listEventsForAdmin();
+  });
+
+  fastify.get('/api/admin/users', async () => {
+    return listUsers();
   });
 
   fastify.get('/api/admin/events/:id', async (request, reply) => {
@@ -61,6 +67,26 @@ export default async function adminRoutes(fastify) {
     try {
       const result = await requestAiGrading(Number(request.params.id));
       return { ...result, aiGrading: { requested: true } };
+    } catch (err) {
+      return reply.code(400).send({ error: err.message });
+    }
+  });
+
+  fastify.post('/api/admin/events/:id/guesses', async (request, reply) => {
+    const { userId, categoryId, description, categoryCorrect, descriptionCorrect, pointsOverride } = request.body ?? {};
+    if (!userId) {
+      return reply.code(400).send({ error: 'userId is required' });
+    }
+    try {
+      return await addManualGuess({
+        eventId: Number(request.params.id),
+        userId: Number(userId),
+        categoryId: categoryId ?? null,
+        description,
+        categoryCorrect,
+        descriptionCorrect,
+        pointsOverride,
+      });
     } catch (err) {
       return reply.code(400).send({ error: err.message });
     }

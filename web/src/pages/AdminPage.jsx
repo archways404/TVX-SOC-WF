@@ -11,6 +11,7 @@ import {
   UserCheck,
   Check,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -344,9 +345,80 @@ function GuessRow({ eventId, guess, categories, onGraded }) {
   );
 }
 
+/**
+ * Lets an admin credit someone who never submitted a guess — they forgot to
+ * play, joined late, or just deserve a manual bonus. Creates a bare guess
+ * row for them; the normal GuessRow controls (checkboxes, points, edit)
+ * take over from there.
+ */
+function AddPlayerForm({ eventId, eligibleUsers, onAdded }) {
+  const [userId, setUserId] = useState('');
+  const [points, setPoints] = useState('0');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (eligibleUsers.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">Every registered player already has a guess for this event.</p>
+    );
+  }
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    if (!userId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await api.post(`/api/admin/events/${eventId}/guesses`, {
+        userId: Number(userId),
+        pointsOverride: points === '' ? 0 : Number(points),
+      });
+      onAdded(updated);
+      setUserId('');
+      setPoints('0');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2 rounded-md border border-dashed border-border p-3">
+      <div className="space-y-1.5">
+        <Label className="text-xs">Player without a guess</Label>
+        <Select value={userId} onChange={(e) => setUserId(e.target.value)} className="h-9 min-w-[10rem]" required>
+          <option value="">Pick a player…</option>
+          {eligibleUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Points to award</Label>
+        <Input
+          type="number"
+          min="0"
+          value={points}
+          onChange={(e) => setPoints(e.target.value)}
+          className="h-9 w-24"
+        />
+      </div>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+      <Button type="submit" size="sm" disabled={saving || !userId}>
+        <UserPlus className="h-3.5 w-3.5" />
+        Add player
+      </Button>
+    </form>
+  );
+}
+
 export function AdminPage() {
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
@@ -358,6 +430,7 @@ export function AdminPage() {
   useEffect(() => {
     refreshEvents();
     api.get('/api/fika/categories').then(setCategories);
+    api.get('/api/admin/users').then(setUsers);
   }, []);
 
   useEffect(() => {
@@ -454,6 +527,14 @@ export function AdminPage() {
                 {selected.guesses.length === 0 && (
                   <p className="py-4 text-sm text-muted-foreground">No guesses for this event yet.</p>
                 )}
+
+                <div className="mt-4">
+                  <AddPlayerForm
+                    eventId={selected.event.id}
+                    eligibleUsers={users.filter((u) => !selected.guesses.some((g) => g.user_id === u.id))}
+                    onAdded={applyUpdate}
+                  />
+                </div>
 
                 <div className="mt-4 flex gap-2">
                   {selected.event.status !== 'scored' ? (

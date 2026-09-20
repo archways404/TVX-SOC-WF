@@ -1,5 +1,5 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
-import { Coffee, History, LogOut, ShieldCheck } from 'lucide-react';
+import { Coffee, History, LogOut, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -8,6 +8,7 @@ import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
 import { HistoryPage } from '@/pages/HistoryPage';
+import { ScoreboardPage } from '@/pages/ScoreboardPage';
 import { AdminPage } from '@/pages/AdminPage';
 
 function NavItem({ to, icon: Icon, children }) {
@@ -51,6 +52,9 @@ function Nav() {
             <NavItem to="/history" icon={History}>
               History
             </NavItem>
+            <NavItem to="/scoreboard" icon={Trophy}>
+              Scoreboard
+            </NavItem>
             {user.role === 'admin' && (
               <NavItem to="/admin" icon={ShieldCheck}>
                 Admin
@@ -81,6 +85,9 @@ function Nav() {
           <NavItem to="/history" icon={History}>
             History
           </NavItem>
+          <NavItem to="/scoreboard" icon={Trophy}>
+            Scoreboard
+          </NavItem>
           {user.role === 'admin' && (
             <NavItem to="/admin" icon={ShieldCheck}>
               Admin
@@ -102,6 +109,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/scoreboard" element={<ScoreboardPage />} />
           </Route>
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminPage />} />
