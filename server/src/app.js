@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.routes.js';
 import fikaRoutes from './routes/fika.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import webhooksRoutes from './routes/webhooks.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true, trustProxy: true });
@@ -30,6 +31,7 @@ export async function buildApp() {
   await app.register(fikaRoutes);
   await app.register(leaderboardRoutes);
   await app.register(adminRoutes);
+  await app.register(webhooksRoutes);
 
   app.get('/api/health', async () => ({ ok: true }));
 

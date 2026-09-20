@@ -3,6 +3,10 @@ import { History } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatEventWeek } from '@/lib/utils';
+
+const STATUS_VARIANT = { awaiting_reveal: 'outline', revealed: 'secondary', scored: 'success' };
+const STATUS_LABEL = { awaiting_reveal: 'Awaiting reveal', revealed: 'Revealed', scored: 'Scored' };
 
 export function HistoryPage() {
   const [events, setEvents] = useState([]);
@@ -22,8 +26,10 @@ export function HistoryPage() {
         <Card key={event.id}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">{event.eventDate}</CardTitle>
-              <Badge variant="secondary">{event.status}</Badge>
+              <CardTitle className="text-base">{formatEventWeek(event.eventDate)}</CardTitle>
+              <Badge variant={STATUS_VARIANT[event.status] ?? 'secondary'}>
+                {STATUS_LABEL[event.status] ?? event.status}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">

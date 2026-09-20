@@ -16,6 +16,8 @@
     --muted-foreground: 215 16% 47%;
     --accent: 24 95% 94%;
     --accent-foreground: 24 60% 30%;
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
@@ -24,24 +26,27 @@
     --radius: 0.75rem;
   }
 
+  /* Black/near-black dark theme with green highlights (not the old navy). */
   .dark {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
-    --card: 217 33% 10%;
-    --card-foreground: 210 40% 98%;
-    --primary: 24 95% 58%;
-    --primary-foreground: 222 47% 8%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 15%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 24 55% 19%;
-    --accent-foreground: 24 95% 88%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 95%;
+    --primary: 142 76% 45%;
+    --primary-foreground: 0 0% 6%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 62%;
+    --accent: 142 45% 15%;
+    --accent-foreground: 142 76% 65%;
+    --success: 142 71% 42%;
+    --success-foreground: 0 0% 6%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 24 95% 58%;
+    --border: 0 0% 17%;
+    --input: 0 0% 17%;
+    --ring: 142 76% 45%;
   }
 }
 

@@ -30,4 +30,7 @@ export const env = {
     .filter(Boolean),
 
   fikaGuessWindowMinutes: Number(process.env.FIKA_GUESS_WINDOW_MINUTES ?? 120),
+
+  n8nGradeWebhookUrl: process.env.N8N_GRADE_WEBHOOK_URL || null,
+  n8nCallbackSecret: process.env.N8N_CALLBACK_SECRET || null,
 };

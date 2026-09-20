@@ -21,6 +21,10 @@ running leaderboard.
    mysql -h <host> -u <user> -p <database> < sql/schema.sql
    ```
 
+   Already have a database from before AI grading was added? Run
+   `mysql -h <host> -u <user> -p <database> < sql/migrations/001_ai_grading.sql`
+   instead — it adds the new columns without touching existing data.
+
 2. Copy env files and fill them in:
 
    ```
@@ -58,12 +62,76 @@ running leaderboard.
   pastry, fruit, candy, other — editable in `fika_categories`) plus free-text
   description. Guesses can be updated until the window closes.
 - The admin reveals the real answer on `/admin`. Category correctness is
-  graded automatically (exact match); description correctness is graded
-  manually per guess since it's free text. Points are configurable per event
-  (`points_category`, `points_description`) and recompute live as guesses are
-  graded.
+  graded automatically (exact match). Description correctness is free text,
+  so it's graded either by an n8n AI workflow (see below) or manually per
+  guess. Points are configurable per event (`points_category`,
+  `points_description`) and recompute live as guesses are graded — unless an
+  admin sets a manual point override on a guess, which sticks until they
+  clear it (re-toggling that guess's checkboxes without an override clears
+  it).
+- The admin can also edit a guess's category/description (typo fixes),
+  delete a guess, delete an entire event, and reopen a finalized ("scored")
+  event to keep correcting it — nothing on `/admin` is ever permanently
+  locked in except by admin action.
 - `/api/leaderboard` reads from the `leaderboard` SQL view, which sums
   `points_awarded` per user.
+
+## n8n AI grading integration
+
+Since guess descriptions are free text ("cinnamon buns" vs "kanelbulle" vs
+"cinnamon roll" should probably all count), the app can hand grading off to
+an n8n workflow instead of an admin clicking through every guess by hand.
+
+1. **Server → n8n (send):** when an admin reveals the answer on `/admin`
+   (or clicks "Send to AI for grading" / "Re-send to AI" any time after),
+   the server does `POST` to `N8N_GRADE_WEBHOOK_URL` with:
+
+   ```json
+   {
+     "eventId": 12,
+     "eventDate": "2026-08-14",
+     "actualCategoryId": 3,
+     "actualDescription": "Cinnamon buns",
+     "pointsCategory": 1,
+     "pointsDescription": 2,
+     "guesses": [
+       {
+         "guessId": 101,
+         "userName": "Philip Stenberg",
+         "categoryId": 3,
+         "categoryLabel": "Pastry",
+         "categoryCorrect": true,
+         "description": "kanelbullar"
+       }
+     ]
+   }
+   ```
+
+   Category correctness is already computed (exact match), so the n8n
+   workflow really only needs to judge `description` against
+   `actualDescription` per guess (an LLM node is a natural fit here).
+
+2. **n8n → server (receive):** the workflow then `POST`s its verdicts back
+   to `POST /api/webhooks/n8n/grade` on this server, with header
+   `x-webhook-secret: <N8N_CALLBACK_SECRET>` and body:
+
+   ```json
+   {
+     "eventId": 12,
+     "results": [
+       { "guessId": 101, "descriptionCorrect": true, "notes": "kanelbulle = cinnamon bun" }
+     ]
+   }
+   ```
+
+   `categoryCorrect` may also be included per result to override the
+   auto-graded value, but normally omit it. `notes` is optional free text
+   (e.g. the LLM's reasoning) shown to the admin on `/admin`.
+
+3. Results land as pre-filled grading with `graded_by = 'ai'` — the admin
+   still reviews them on `/admin` and can override any checkbox, points, or
+   guess content before finalizing. Leave `N8N_GRADE_WEBHOOK_URL` unset to
+   disable this entirely and grade everything by hand, as before.
 
 ## Docker
 
@@ -96,7 +164,9 @@ needed. Checklist:
    `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_DOMAIN=telavox.com`, `JWT_SECRET`,
    `ADMIN_EMAILS`, `NODE_ENV=production`. If MySQL is a separate Coolify
    service on the same Docker network, `DB_HOST` is that service's name, not
-   `127.0.0.1`.
+   `127.0.0.1`. Optionally add `N8N_GRADE_WEBHOOK_URL` and
+   `N8N_CALLBACK_SECRET` to enable AI grading (see above) — the callback URL
+   to give the n8n workflow is `https://<your-domain>/api/webhooks/n8n/grade`.
 3. **Port:** set the app's exposed port to `1167` (matches the Dockerfile's
    `EXPOSE`/`PORT`). Coolify publishes it on the host; point nginx-ui's
    reverse proxy vhost at that host:port, terminating TLS in nginx.

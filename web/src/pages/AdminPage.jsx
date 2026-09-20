@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import {
+  ShieldCheck,
+  Sparkles,
+  Pencil,
+  Trash2,
+  RotateCcw,
+  Loader2,
+  CheckCircle2,
+  Circle,
+  UserCheck,
+  Check,
+  X,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +20,26 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { cn, formatEventWeek } from '@/lib/utils';
+
+const STATUS_BADGE = {
+  awaiting_reveal: { variant: 'outline', label: 'Awaiting reveal' },
+  revealed: { variant: 'secondary', label: 'Revealed' },
+  scored: { variant: 'success', label: 'Scored' },
+};
+
+const GRADED_BY_META = {
+  pending: { label: 'Pending', icon: Circle, className: 'text-muted-foreground' },
+  auto: { label: 'Auto', icon: CheckCircle2, className: 'border-transparent bg-secondary text-secondary-foreground' },
+  ai: { label: 'AI', icon: Sparkles, className: 'border-primary/40 text-primary' },
+  admin: { label: 'Admin', icon: UserCheck, className: 'border-transparent bg-secondary text-secondary-foreground' },
+};
+
+function StatusBadge({ status }) {
+  const meta = STATUS_BADGE[status] ?? { variant: 'outline', label: status };
+  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+}
 
 function EventList({ events, selectedId, onSelect }) {
   return (
@@ -16,23 +48,67 @@ function EventList({ events, selectedId, onSelect }) {
         <CardTitle>Events</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
+        {events.length === 0 && <p className="text-sm text-muted-foreground">No fika events yet.</p>}
         {events.map((event) => (
           <button
             key={event.id}
             onClick={() => onSelect(event.id)}
-            className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-accent ${
-              event.id === selectedId ? 'bg-accent' : ''
-            }`}
+            className={cn(
+              'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
+              event.id === selectedId && 'bg-accent',
+            )}
           >
-            <span>{event.event_date}</span>
-            <span className="flex items-center gap-2">
-              <span className="text-muted-foreground">{event.guess_count} guesses</span>
-              <Badge variant="secondary">{event.status}</Badge>
+            <span className="font-medium">{formatEventWeek(event.event_date)}</span>
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="text-muted-foreground">{event.guess_count}</span>
+              <StatusBadge status={event.status} />
             </span>
           </button>
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+function AiGradingPanel({ event, onUpdated }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (event.status === 'awaiting_reveal') return null;
+
+  async function handleRequest() {
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await api.post(`/api/admin/events/${event.id}/request-ai-grading`, {});
+      onUpdated(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Sparkles className="h-4 w-4 text-primary" />
+        {event.ai_graded_at ? (
+          <span>AI grading applied — review below and finalize when ready.</span>
+        ) : event.ai_requested_at ? (
+          <span>Sent to n8n for grading — waiting for results to be posted back.</span>
+        ) : (
+          <span>Not sent to n8n yet. Description correctness is free text, so an AI pass can pre-grade it.</span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {error && <span className="text-xs text-destructive">{error}</span>}
+        <Button type="button" variant="outline" size="sm" disabled={loading} onClick={handleRequest}>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          {event.ai_requested_at ? 'Re-send to AI' : 'Send to AI for grading'}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -42,10 +118,12 @@ function RevealForm({ event, categories, onRevealed }) {
   const [pointsCategory, setPointsCategory] = useState(event.points_category);
   const [pointsDescription, setPointsDescription] = useState(event.points_description);
   const [saving, setSaving] = useState(false);
+  const [aiNotice, setAiNotice] = useState(null);
 
   async function handleReveal(e) {
     e.preventDefault();
     setSaving(true);
+    setAiNotice(null);
     try {
       const updated = await api.put(`/api/admin/events/${event.id}/reveal`, {
         actualCategoryId: actualCategoryId ? Number(actualCategoryId) : null,
@@ -53,6 +131,11 @@ function RevealForm({ event, categories, onRevealed }) {
         pointsCategory: Number(pointsCategory),
         pointsDescription: Number(pointsDescription),
       });
+      if (updated.aiGrading && !updated.aiGrading.requested && updated.aiGrading.error) {
+        setAiNotice(`AI grading wasn't sent: ${updated.aiGrading.error}`);
+      } else if (updated.aiGrading?.requested) {
+        setAiNotice('Sent to n8n for AI grading.');
+      }
       onRevealed(updated);
     } finally {
       setSaving(false);
@@ -89,6 +172,7 @@ function RevealForm({ event, categories, onRevealed }) {
           onChange={(e) => setPointsDescription(e.target.value)}
         />
       </div>
+      {aiNotice && <p className="text-xs text-muted-foreground sm:col-span-2">{aiNotice}</p>}
       <Button type="submit" disabled={saving} className="sm:col-span-2">
         {event.status === 'awaiting_reveal' ? 'Reveal & auto-grade categories' : 'Update reveal'}
       </Button>
@@ -96,20 +180,98 @@ function RevealForm({ event, categories, onRevealed }) {
   );
 }
 
-function GuessRow({ eventId, guess, onGraded }) {
+function GuessRow({ eventId, guess, categories, onGraded }) {
   const [descriptionCorrect, setDescriptionCorrect] = useState(Boolean(guess.description_correct));
   const [categoryCorrect, setCategoryCorrect] = useState(Boolean(guess.category_correct));
+  const [pointsInput, setPointsInput] = useState(String(guess.points_awarded));
+  const [editing, setEditing] = useState(false);
+  const [editDescription, setEditDescription] = useState(guess.description);
+  const [editCategoryId, setEditCategoryId] = useState(guess.category_id ?? '');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // GuessRow keeps its own local state (checkboxes, points, edit fields) so
+  // typing/toggling feels instant, but that means it won't pick up changes
+  // made elsewhere — AI grading applied in bulk, another admin's edit — on
+  // its own. Re-sync from the prop whenever the server's copy changes,
+  // unless the admin is mid-edit of this exact row.
+  useEffect(() => {
+    setDescriptionCorrect(Boolean(guess.description_correct));
+    setCategoryCorrect(Boolean(guess.category_correct));
+    setPointsInput(String(guess.points_awarded));
+    if (!editing) {
+      setEditDescription(guess.description);
+      setEditCategoryId(guess.category_id ?? '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guess.description_correct, guess.category_correct, guess.points_awarded, guess.description, guess.category_id]);
 
   async function grade(next) {
     const updated = await api.put(`/api/admin/events/${eventId}/guesses/${guess.id}`, next);
     onGraded(updated);
   }
 
+  async function handlePointsBlur() {
+    const next = Number(pointsInput);
+    if (Number.isNaN(next) || next === guess.points_awarded) {
+      setPointsInput(String(guess.points_awarded));
+      return;
+    }
+    await grade({ categoryCorrect, descriptionCorrect, pointsOverride: next });
+  }
+
+  async function handleSaveEdit() {
+    setBusy(true);
+    try {
+      const updated = await api.patch(`/api/admin/events/${eventId}/guesses/${guess.id}`, {
+        categoryId: editCategoryId ? Number(editCategoryId) : null,
+        description: editDescription,
+      });
+      onGraded(updated);
+      setEditing(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    setBusy(true);
+    try {
+      const updated = await api.del(`/api/admin/events/${eventId}/guesses/${guess.id}`);
+      onGraded(updated);
+    } finally {
+      setBusy(false);
+      setConfirmingDelete(false);
+    }
+  }
+
+  const gradedMeta = GRADED_BY_META[guess.graded_by] ?? GRADED_BY_META.pending;
+  const GradedIcon = gradedMeta.icon;
+
   return (
     <TableRow>
       <TableCell className="font-medium">{guess.user_name}</TableCell>
-      <TableCell>{guess.category_label ?? '—'}</TableCell>
-      <TableCell>{guess.description}</TableCell>
+      <TableCell>
+        {editing ? (
+          <Select value={editCategoryId} onChange={(e) => setEditCategoryId(e.target.value)} className="h-9 min-w-[9rem]">
+            <option value="">None</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          guess.category_label ?? '—'
+        )}
+      </TableCell>
+      <TableCell className="max-w-[16rem]">
+        {editing ? (
+          <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="h-9" />
+        ) : (
+          <span title={guess.ai_notes ?? undefined}>{guess.description}</span>
+        )}
+      </TableCell>
       <TableCell>
         <input
           type="checkbox"
@@ -130,7 +292,54 @@ function GuessRow({ eventId, guess, onGraded }) {
           }}
         />
       </TableCell>
-      <TableCell className="text-right">{guess.points_awarded}</TableCell>
+      <TableCell className="text-right">
+        <Input
+          type="number"
+          min="0"
+          value={pointsInput}
+          onChange={(e) => setPointsInput(e.target.value)}
+          onBlur={handlePointsBlur}
+          className="h-9 w-16 text-right"
+        />
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline" className={cn('gap-1', gradedMeta.className)}>
+          <GradedIcon className="h-3 w-3" />
+          {gradedMeta.label}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center justify-end gap-1">
+          {editing ? (
+            <>
+              <Button type="button" variant="success" size="sm" disabled={busy} onClick={handleSaveEdit}>
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => setEditing(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmingDelete(true)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </>
+          )}
+        </div>
+        <ConfirmDialog
+          open={confirmingDelete}
+          title="Delete this guess?"
+          description={`${guess.user_name}'s guess will be permanently removed and won't count toward their score.`}
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      </TableCell>
     </TableRow>
   );
 }
@@ -140,6 +349,9 @@ export function AdminPage() {
   const [categories, setCategories] = useState([]);
   const [selected, setSelected] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [confirmingFinalize, setConfirmingFinalize] = useState(false);
+  const [confirmingReopen, setConfirmingReopen] = useState(false);
+  const [confirmingDeleteEvent, setConfirmingDeleteEvent] = useState(false);
 
   const refreshEvents = () => api.get('/api/admin/events').then(setEvents);
 
@@ -151,6 +363,8 @@ export function AdminPage() {
   useEffect(() => {
     if (selectedId) {
       api.get(`/api/admin/events/${selectedId}`).then(setSelected);
+    } else {
+      setSelected(null);
     }
   }, [selectedId]);
 
@@ -162,6 +376,20 @@ export function AdminPage() {
   async function handleFinalize() {
     const updated = await api.post(`/api/admin/events/${selected.event.id}/finalize`, {});
     applyUpdate(updated);
+    setConfirmingFinalize(false);
+  }
+
+  async function handleReopen() {
+    const updated = await api.post(`/api/admin/events/${selected.event.id}/reopen`, {});
+    applyUpdate(updated);
+    setConfirmingReopen(false);
+  }
+
+  async function handleDeleteEvent() {
+    await api.del(`/api/admin/events/${selected.event.id}`);
+    setConfirmingDeleteEvent(false);
+    setSelectedId(null);
+    refreshEvents();
   }
 
   return (
@@ -177,10 +405,19 @@ export function AdminPage() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Reveal — {selected.event.event_date}</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>Reveal — {formatEventWeek(selected.event.event_date)}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={selected.event.status} />
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmingDeleteEvent(true)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <RevealForm event={selected.event} categories={categories} onRevealed={applyUpdate} />
+              <CardContent className="space-y-3">
+                <RevealForm key={selected.event.id} event={selected.event} categories={categories} onRevealed={applyUpdate} />
+                <AiGradingPanel event={selected.event} onUpdated={applyUpdate} />
               </CardContent>
             </Card>
 
@@ -198,19 +435,38 @@ export function AdminPage() {
                       <TableHead>Category ✓</TableHead>
                       <TableHead>Description ✓</TableHead>
                       <TableHead className="text-right">Points</TableHead>
+                      <TableHead>Graded by</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selected.guesses.map((guess) => (
-                      <GuessRow key={guess.id} eventId={selected.event.id} guess={guess} onGraded={applyUpdate} />
+                      <GuessRow
+                        key={guess.id}
+                        eventId={selected.event.id}
+                        guess={guess}
+                        categories={categories}
+                        onGraded={applyUpdate}
+                      />
                     ))}
                   </TableBody>
                 </Table>
-                {selected.event.status !== 'scored' && (
-                  <Button className="mt-4" variant="secondary" onClick={handleFinalize}>
-                    Finalize scoring
-                  </Button>
+                {selected.guesses.length === 0 && (
+                  <p className="py-4 text-sm text-muted-foreground">No guesses for this event yet.</p>
                 )}
+
+                <div className="mt-4 flex gap-2">
+                  {selected.event.status !== 'scored' ? (
+                    <Button variant="success" onClick={() => setConfirmingFinalize(true)}>
+                      Finalize scoring
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => setConfirmingReopen(true)}>
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reopen for editing
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -218,6 +474,38 @@ export function AdminPage() {
           <p className="text-sm text-muted-foreground">Pick an event to grade it.</p>
         )}
       </div>
+
+      {selected && (
+        <>
+          <ConfirmDialog
+            open={confirmingFinalize}
+            title="Finalize scoring?"
+            description="Points become final and the leaderboard updates. You can still reopen this event later to correct mistakes."
+            confirmLabel="Finalize"
+            variant="success"
+            onConfirm={handleFinalize}
+            onCancel={() => setConfirmingFinalize(false)}
+          />
+          <ConfirmDialog
+            open={confirmingReopen}
+            title="Reopen this event?"
+            description='Status goes back to "revealed" so you can keep correcting guesses before finalizing again.'
+            confirmLabel="Reopen"
+            variant="success"
+            onConfirm={handleReopen}
+            onCancel={() => setConfirmingReopen(false)}
+          />
+          <ConfirmDialog
+            open={confirmingDeleteEvent}
+            title="Delete this entire event?"
+            description="This permanently removes the event and every guess submitted for it. This can't be undone."
+            confirmLabel="Delete event"
+            variant="destructive"
+            onConfirm={handleDeleteEvent}
+            onCancel={() => setConfirmingDeleteEvent(false)}
+          />
+        </>
+      )}
     </div>
   );
 }
