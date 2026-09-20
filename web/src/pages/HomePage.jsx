@@ -3,7 +3,7 @@ import { Leaderboard } from '@/components/Leaderboard';
 
 export function HomePage() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
       <FikaGuessCard />
       <Leaderboard />
     </div>

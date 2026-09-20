@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
@@ -15,9 +16,7 @@ function loadGoogleScript() {
   }
 
   googleScriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector(
-      `script[src="${SCRIPT_SRC}"]`
-    );
+    const existing = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
 
     if (existing) {
       existing.addEventListener('load', resolve, { once: true });
@@ -31,8 +30,7 @@ function loadGoogleScript() {
     script.defer = true;
 
     script.onload = resolve;
-    script.onerror = () =>
-      reject(new Error('Failed to load Google Identity Services script'));
+    script.onerror = () => reject(new Error('Failed to load Google Identity Services script'));
 
     document.head.appendChild(script);
   });
@@ -43,17 +41,12 @@ function loadGoogleScript() {
 export function GoogleSignInButton() {
   const buttonRef = useRef(null);
   const { loginWithGoogleCredential } = useAuth();
+  const { theme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-    console.log('Google OAuth debug:', {
-      clientId,
-      hasClientId: !!clientId,
-      googleBeforeLoad: !!window.google,
-    });
 
     if (!clientId) {
       console.error('VITE_GOOGLE_CLIENT_ID is missing from frontend build');
@@ -62,14 +55,6 @@ export function GoogleSignInButton() {
 
     loadGoogleScript()
       .then(() => {
-        console.log('Google script loaded:', {
-          google: !!window.google,
-          accounts: !!window.google?.accounts,
-          id: !!window.google?.accounts?.id,
-          buttonElement: !!buttonRef.current,
-          cancelled,
-        });
-
         if (cancelled) return;
 
         if (!window.google?.accounts?.id) {
@@ -95,13 +80,14 @@ export function GoogleSignInButton() {
           },
         });
 
+        // Re-render on theme changes so the button matches dark/light mode.
+        buttonRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(buttonRef.current, {
-          theme: 'outline',
+          theme: theme === 'dark' ? 'filled_black' : 'outline',
           size: 'large',
+          shape: 'pill',
           text: 'signin_with',
         });
-
-        console.log('Google button rendered');
       })
       .catch((err) => {
         console.error('Google Sign-In initialization failed:', err);
@@ -110,7 +96,7 @@ export function GoogleSignInButton() {
     return () => {
       cancelled = true;
     };
-  }, [loginWithGoogleCredential]);
+  }, [loginWithGoogleCredential, theme]);
 
   return <div ref={buttonRef} />;
 }

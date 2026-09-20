@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,53 +165,59 @@ export function AdminPage() {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-      <EventList events={events} selectedId={selectedId} onSelect={setSelectedId} />
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <ShieldCheck className="h-4 w-4" />
+        Admin — grade fika guesses
+      </div>
+      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <EventList events={events} selectedId={selectedId} onSelect={setSelectedId} />
 
-      {selected ? (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reveal — {selected.event.event_date}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RevealForm event={selected.event} categories={categories} onRevealed={applyUpdate} />
-            </CardContent>
-          </Card>
+        {selected ? (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reveal — {selected.event.event_date}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RevealForm event={selected.event} categories={categories} onRevealed={applyUpdate} />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Guesses ({selected.guesses.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Guess</TableHead>
-                    <TableHead>Category ✓</TableHead>
-                    <TableHead>Description ✓</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selected.guesses.map((guess) => (
-                    <GuessRow key={guess.id} eventId={selected.event.id} guess={guess} onGraded={applyUpdate} />
-                  ))}
-                </TableBody>
-              </Table>
-              {selected.event.status !== 'scored' && (
-                <Button className="mt-4" variant="secondary" onClick={handleFinalize}>
-                  Finalize scoring
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">Pick an event to grade it.</p>
-      )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Guesses ({selected.guesses.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Guess</TableHead>
+                      <TableHead>Category ✓</TableHead>
+                      <TableHead>Description ✓</TableHead>
+                      <TableHead className="text-right">Points</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selected.guesses.map((guess) => (
+                      <GuessRow key={guess.id} eventId={selected.event.id} guess={guess} onGraded={applyUpdate} />
+                    ))}
+                  </TableBody>
+                </Table>
+                {selected.event.status !== 'scored' && (
+                  <Button className="mt-4" variant="secondary" onClick={handleFinalize}>
+                    Finalize scoring
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Pick an event to grade it.</p>
+        )}
+      </div>
     </div>
   );
 }

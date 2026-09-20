@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fika Friday</title>
+    <script>
+      // Applied before first paint so switching themes never flashes the wrong one.
+      (function () {
+        try {
+          var stored = localStorage.getItem('fika-theme');
+          document.documentElement.classList.toggle('dark', stored !== 'light');
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

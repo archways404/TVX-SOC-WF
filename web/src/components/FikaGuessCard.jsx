@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Coffee } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,10 @@ export function FikaGuessCard() {
   if (!event) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">Loading this week's fika…</CardContent>
+        <CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+          <Coffee className="h-4 w-4 animate-pulse" />
+          Loading this week's fika…
+        </CardContent>
       </Card>
     );
   }
@@ -66,7 +70,10 @@ export function FikaGuessCard() {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>This week's fika</CardTitle>
+          <div className="flex items-center gap-2">
+            <Coffee className="h-4 w-4 text-primary" />
+            <CardTitle>This week's fika</CardTitle>
+          </div>
           <Badge variant={event.isOpen ? 'success' : 'secondary'}>{event.isOpen ? 'Open' : 'Closed'}</Badge>
         </div>
         <CardDescription>
