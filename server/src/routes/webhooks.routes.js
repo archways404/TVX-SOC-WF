@@ -28,7 +28,7 @@ export default async function webhooksRoutes(fastify) {
     }
 
     try {
-      const updated = await applyAiGrading({ eventId: Number(eventId), results });
+      const updated = await applyAiGrading({ eventId: Number(eventId), results, rawResponse: request.body });
       return updated;
     } catch (err) {
       return reply.code(404).send({ error: err.message });

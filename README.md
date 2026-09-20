@@ -23,7 +23,15 @@ running leaderboard.
 
    Already have a database from before AI grading was added? Run
    `mysql -h <host> -u <user> -p <database> < sql/migrations/001_ai_grading.sql`
-   instead — it adds the new columns without touching existing data.
+   instead — it adds the new columns without touching existing data. Database
+   from before score adjustments / full AI transparency? Also run
+   `sql/migrations/002_scores_and_ai_transparency.sql`. Migrations are
+   cumulative — run them in order, only the ones you're missing.
+
+   Want to poke around the admin panel with realistic data instead of an
+   empty database? `mysql -h <host> -u <user> -p <database> < sql/seed-dev-data.sql`
+   adds a handful of fake players and a few weeks of fika events in different
+   states. Dev/demo only — never run it against production.
 
 2. Copy env files and fill them in:
 
@@ -40,18 +48,20 @@ running leaderboard.
      ID as the server, "Web application" type in Google Cloud Console, with
      your frontend origin as an authorized JavaScript origin).
 
-3. Install dependencies (npm workspaces):
+3. Run both apps in dev:
 
    ```
-   npm install
+   npm run dev
    ```
 
-4. Run both apps in dev:
-
-   ```
-   npm run dev:server   # http://localhost:3001
-   npm run dev:web      # http://localhost:5173
-   ```
+   Installs dependencies for both workspaces first (via a `predev` hook —
+   safe to run even if `node_modules` already exists) and then starts the
+   server (`http://localhost:3001`) and the web app
+   (`http://localhost:5173`) together, labeled `[server]`/`[web]` in the
+   same terminal. Ctrl+C stops both. Prefer them separate (e.g. to restart
+   just one) or want to skip the auto-install? `npm run dev:server` /
+   `npm run dev:web` still work individually, and `npm install` on its own
+   installs both workspaces' dependencies.
 
 ## How it works
 
@@ -85,6 +95,33 @@ running leaderboard.
   and everyone outside the top 3 listed plainly below. It polls
   `/api/leaderboard` every 60s so a screen left open stays current without
   replaying the entrance animation.
+- `/history` shows everyone's guess for each revealed week, not just your
+  own — an expandable table per event with player, category, guess text,
+  correctness, and points, sorted best-score-first.
+
+## Admin panel
+
+`/admin` is three tabs:
+
+- **Events** — the per-week grading flow described above (reveal, AI
+  grading, per-guess edit/delete/points-override, add a player who never
+  guessed, finalize/reopen/delete the event).
+- **Players & Scores** — standings across everyone, plus manual
+  **score adjustments**: grant or deduct points for any registered player
+  independent of any event (bonuses, corrections, crediting someone who
+  never played). Stored in `score_adjustments` and summed into the
+  `leaderboard` view alongside guess points; each one is undoable and shows
+  who applied it and why.
+- **SQL Console** — runs raw SQL directly against the database with the
+  admin's own session. Deliberately unrestricted (this is a small internal
+  tool for a trusted admin, not a public surface) but with two guardrails:
+  only one statement per request (no `;`-chaining past it), and anything
+  that isn't `SELECT`/`SHOW`/`EXPLAIN` requires an explicit confirm step
+  (`POST /api/admin/sql` replies `409 { requiresConfirm: true }`, and the UI
+  turns that into a red confirmation dialog before resending with
+  `confirm: true`). Every statement is logged server-side with the admin's
+  email. There's no undo — prefer the Events/Players tabs for anything they
+  already cover.
 
 ## n8n AI grading integration
 
@@ -142,6 +179,11 @@ an n8n workflow instead of an admin clicking through every guess by hand.
    still reviews them on `/admin` and can override any checkbox, points, or
    guess content before finalizing. Leave `N8N_GRADE_WEBHOOK_URL` unset to
    disable this entirely and grade everything by hand, as before.
+4. Full transparency, not just a summary: each guess's `notes` is shown in
+   full on `/admin` (not truncated, not hidden behind a tooltip), and the
+   *entire* raw request body n8n posted back is stashed as-is on the event
+   (`ai_raw_response`, a JSON column) — expand "Raw response" on the Events
+   tab to see exactly what the AI said for every guess in one place.
 
 ## Docker
 
@@ -180,7 +222,12 @@ needed. Checklist:
 3. **Port:** set the app's exposed port to `1167` (matches the Dockerfile's
    `EXPOSE`/`PORT`). Coolify publishes it on the host; point nginx-ui's
    reverse proxy vhost at that host:port, terminating TLS in nginx.
-4. **Health check path:** `/api/health` (returns `{"ok":true}`).
+4. **Health check path:** `/api/health` (returns `{"ok":true}`) for a plain
+   liveness ping — it doesn't touch the database, so it can't false-negative
+   from a transient DB hiccup and cause an unnecessary restart loop. Use
+   `/api/health/ready` instead if you want the check to also confirm the
+   database is reachable (`SELECT 1`) — it returns `503` with the underlying
+   error when the DB is down, `200 {"ok":true,"db":"up"}` otherwise.
 5. **Google Cloud Console:** add the real HTTPS domain (the one nginx-ui
    serves) as an Authorized JavaScript origin on the OAuth client — Google
    Identity Services refuses to run on an origin that isn't listed.

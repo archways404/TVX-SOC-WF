@@ -1,4 +1,16 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+// Plain `import 'dotenv/config'` only looks in process.cwd() — fine when you
+// happen to launch node from the repo root, but npm workspace scripts
+// (`npm run dev --workspace server`, and so `npm run dev:server` from root)
+// run with cwd set to server/, so it would silently miss the root .env the
+// README tells you to create. Resolve the path from this file's own
+// location instead, so it works the same regardless of where it's invoked
+// from. Docker doesn't go through this at all (env vars come from
+// `--env-file`/the platform directly), so this only affects local dev.
+dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 
 function required(name, fallback) {
   const value = process.env[name] ?? fallback;

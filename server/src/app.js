@@ -9,11 +9,14 @@ import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
 
 import { env } from './config/env.js';
+import { pool } from './db/pool.js';
 import authPlugin from './plugins/authPlugin.js';
 import authRoutes from './routes/auth.routes.js';
 import fikaRoutes from './routes/fika.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminScoresRoutes from './routes/adminScores.routes.js';
+import adminSqlRoutes from './routes/adminSql.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
 
 export async function buildApp() {
@@ -31,9 +34,28 @@ export async function buildApp() {
   await app.register(fikaRoutes);
   await app.register(leaderboardRoutes);
   await app.register(adminRoutes);
+  await app.register(adminScoresRoutes);
+  await app.register(adminSqlRoutes);
   await app.register(webhooksRoutes);
 
+  // Liveness only — the process is up and answering HTTP, nothing more.
+  // Load balancers/uptime pings that just want a fast 200 should use this.
   app.get('/api/health', async () => ({ ok: true }));
+
+  // Readiness — also confirms the database is actually reachable, since
+  // that's the thing most likely to silently fail while the Node process
+  // itself stays up and keeps returning a happy /api/health. Point
+  // orchestrator health checks (Coolify, Docker HEALTHCHECK, k8s probes)
+  // here instead when you want a real signal before routing traffic in.
+  app.get('/api/health/ready', async (request, reply) => {
+    try {
+      await pool.query('SELECT 1');
+      return { ok: true, db: 'up' };
+    } catch (err) {
+      reply.code(503);
+      return { ok: false, db: 'down', error: err.message };
+    }
+  });
 
   await registerWebClient(app);
 

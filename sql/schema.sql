@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS fika_events (
   revealed_at         TIMESTAMP NULL,
   ai_requested_at     TIMESTAMP NULL COMMENT 'When the reveal was last sent to n8n for AI grading',
   ai_graded_at        TIMESTAMP NULL COMMENT 'When n8n last posted grading results back',
+  ai_raw_response     JSON NULL COMMENT 'Full body n8n posted back to /api/webhooks/n8n/grade, for admin inspection',
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_fika_events_event_date (event_date),
   KEY idx_fika_events_status (status),
@@ -75,7 +76,7 @@ CREATE TABLE IF NOT EXISTS guesses (
   points_awarded       INT UNSIGNED NOT NULL DEFAULT 0,
   points_override      TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Admin set points_awarded directly instead of the computed value',
   graded_by            ENUM('pending', 'auto', 'ai', 'admin') NOT NULL DEFAULT 'pending' COMMENT 'Who last decided category_correct/description_correct',
-  ai_notes             VARCHAR(255) NULL COMMENT 'Optional reasoning n8n sent back with its grading',
+  ai_notes             TEXT NULL COMMENT 'Full reasoning n8n sent back with its grading, unmodified',
   submitted_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   graded_at            TIMESTAMP NULL,
   UNIQUE KEY uq_guesses_event_user (fika_event_id, user_id),
@@ -91,23 +92,60 @@ CREATE TABLE IF NOT EXISTS guesses (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- score_adjustments — manual point grants/deductions an admin makes directly
+-- to a player, independent of any fika_event/guess (bonuses, corrections for
+-- someone who never played, penalties, etc). Summed into the leaderboard
+-- alongside guesses.points_awarded.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS score_adjustments (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id     INT UNSIGNED NOT NULL,
+  points      INT NOT NULL COMMENT 'Signed — negative deducts',
+  reason      VARCHAR(255) NULL,
+  created_by  INT UNSIGNED NULL COMMENT 'Admin user id who made the adjustment',
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_score_adjustments_user (user_id),
+  CONSTRAINT fk_score_adjustments_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_score_adjustments_admin
+    FOREIGN KEY (created_by) REFERENCES users(id)
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------------------------------------------------------------------------
--- Running leaderboard — sum of points per user across all graded guesses.
+-- Running leaderboard — guess points plus manual score_adjustments per user.
+-- Aggregated in subqueries first (not a single multi-table JOIN) so the two
+-- one-to-many relationships don't fan out and double-count each other.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW leaderboard AS
 SELECT
-  u.id                                                                AS user_id,
-  u.name                                                              AS name,
-  u.avatar_url                                                        AS avatar_url,
-  COALESCE(SUM(g.points_awarded), 0)                                  AS total_points,
-  COUNT(g.id)                                                         AS guesses_made,
-  COALESCE(SUM(CASE WHEN g.category_correct = 1 THEN 1 ELSE 0 END), 0)    AS category_correct_count,
-  COALESCE(SUM(CASE WHEN g.description_correct = 1 THEN 1 ELSE 0 END), 0) AS description_correct_count
+  u.id                                                    AS user_id,
+  u.name                                                  AS name,
+  u.avatar_url                                            AS avatar_url,
+  COALESCE(g.guess_points, 0) + COALESCE(sa.adj_points, 0) AS total_points,
+  COALESCE(g.guesses_made, 0)                             AS guesses_made,
+  COALESCE(g.category_correct_count, 0)                   AS category_correct_count,
+  COALESCE(g.description_correct_count, 0)                AS description_correct_count
 FROM users u
-LEFT JOIN guesses g ON g.user_id = u.id
-GROUP BY u.id, u.name, u.avatar_url
+LEFT JOIN (
+  SELECT
+    user_id,
+    SUM(points_awarded)                                          AS guess_points,
+    COUNT(*)                                                     AS guesses_made,
+    SUM(CASE WHEN category_correct = 1 THEN 1 ELSE 0 END)        AS category_correct_count,
+    SUM(CASE WHEN description_correct = 1 THEN 1 ELSE 0 END)     AS description_correct_count
+  FROM guesses
+  GROUP BY user_id
+) g ON g.user_id = u.id
+LEFT JOIN (
+  SELECT user_id, SUM(points) AS adj_points
+  FROM score_adjustments
+  GROUP BY user_id
+) sa ON sa.user_id = u.id
 ORDER BY total_points DESC, name ASC;
 
 -- ---------------------------------------------------------------------------

@@ -222,9 +222,11 @@ export async function requestAiGrading(eventId) {
 /**
  * Applies grading results n8n posted back. Each result can override
  * categoryCorrect too, but normally only judges descriptionCorrect since
- * category is already auto-graded on reveal.
+ * category is already auto-graded on reveal. `rawResponse` (the full
+ * request body n8n sent) is stashed on the event as-is so an admin can
+ * inspect exactly what the AI said, not just the per-guess summary.
  */
-export async function applyAiGrading({ eventId, results }) {
+export async function applyAiGrading({ eventId, results, rawResponse }) {
   const event = await getEvent(eventId);
   if (!event) throw new Error('Event not found');
 
@@ -246,10 +248,13 @@ export async function applyAiGrading({ eventId, results }) {
        SET category_correct = ?, description_correct = ?, points_awarded = ?,
            graded_by = 'ai', ai_notes = ?, graded_at = NOW()
        WHERE id = ?`,
-      [categoryCorrect ? 1 : 0, descriptionCorrect ? 1 : 0, points, result.notes?.slice(0, 255) ?? null, guess.id],
+      [categoryCorrect ? 1 : 0, descriptionCorrect ? 1 : 0, points, result.notes?.slice(0, 4000) ?? null, guess.id],
     );
   }
 
-  await pool.query('UPDATE fika_events SET ai_graded_at = NOW() WHERE id = ?', [eventId]);
+  await pool.query(
+    'UPDATE fika_events SET ai_graded_at = NOW(), ai_raw_response = ? WHERE id = ?',
+    [rawResponse !== undefined ? JSON.stringify(rawResponse) : null, eventId],
+  );
   return getEventWithGuesses(eventId);
 }
