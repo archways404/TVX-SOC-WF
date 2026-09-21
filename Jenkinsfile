@@ -38,7 +38,7 @@ pipeline {
         // Baked into the frontend bundle at build time — not secret values,
         // safe to leave as plain env vars.
         VITE_API_URL           = ''                  // empty = same-origin (correct for this single-container setup)
-        VITE_GOOGLE_CLIENT_ID  = credentials('vite-google-client-id')
+        VITE_GOOGLE_CLIENT_ID  = "872017330256-ug8l21jlgo303slhnul43gmjnft3lfub.apps.googleusercontent.com"
     }
 
     stages {
