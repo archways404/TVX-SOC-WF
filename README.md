@@ -41,7 +41,8 @@ running leaderboard.
    ```
 
    - `.env` (repo root, read by the server): DB connection, `GOOGLE_CLIENT_ID`,
-     `GOOGLE_ALLOWED_DOMAIN` (set to your Workspace domain, e.g. `telavox.com`),
+     `GOOGLE_ALLOWED_DOMAIN` (your Workspace domain(s), comma-separated, e.g.
+     `telavox.com,telavox.se`),
      `JWT_SECRET`, `ADMIN_EMAILS` (comma-separated — these accounts get the
      `admin` role automatically on login).
    - `web/.env`: `VITE_API_URL` and `VITE_GOOGLE_CLIENT_ID` (same OAuth client
@@ -213,7 +214,7 @@ needed. Checklist:
    Sign-In button silently fails.
 2. **Runtime env vars** (Coolify's environment variables UI, not build
    args): `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`,
-   `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_DOMAIN=telavox.com`, `JWT_SECRET`,
+   `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_DOMAIN=telavox.com,telavox.se`, `JWT_SECRET`,
    `ADMIN_EMAILS`, `NODE_ENV=production`. If MySQL is a separate Coolify
    service on the same Docker network, `DB_HOST` is that service's name, not
    `127.0.0.1`. Optionally add `N8N_GRADE_WEBHOOK_URL` and

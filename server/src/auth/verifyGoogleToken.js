@@ -18,11 +18,11 @@ export async function verifyGoogleIdToken(idToken) {
     throw new Error('Google email not verified');
   }
 
-  if (env.googleAllowedDomain) {
+  if (env.googleAllowedDomains.length > 0) {
     const emailDomain = payload.email.split('@')[1]?.toLowerCase();
     const hd = payload.hd?.toLowerCase();
-    const allowed = env.googleAllowedDomain.toLowerCase();
-    if (hd !== allowed && emailDomain !== allowed) {
+    const allowed = env.googleAllowedDomains;
+    if (!allowed.includes(hd) && !allowed.includes(emailDomain)) {
       throw new Error(`Account domain not allowed: ${payload.email}`);
     }
   }

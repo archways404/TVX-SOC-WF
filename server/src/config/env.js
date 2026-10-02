@@ -34,7 +34,11 @@ export const env = {
   },
 
   googleClientId: required('GOOGLE_CLIENT_ID'),
-  googleAllowedDomain: process.env.GOOGLE_ALLOWED_DOMAIN ?? null,
+  // Comma-separated, e.g. "telavox.com,telavox.se". Empty = any Google account.
+  googleAllowedDomains: (process.env.GOOGLE_ALLOWED_DOMAIN ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
   jwtSecret: required('JWT_SECRET'),
   adminEmails: (process.env.ADMIN_EMAILS ?? '')
     .split(',')
