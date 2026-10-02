@@ -43,32 +43,62 @@ function StatusBadge({ status }) {
   return <Badge variant={meta.variant}>{meta.label}</Badge>;
 }
 
-function EventList({ events, selectedId, onSelect }) {
+function EventRow({ event, selected, onSelect, live }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Events</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        {events.length === 0 && <p className="text-sm text-muted-foreground">No fika events yet.</p>}
-        {events.map((event) => (
-          <button
-            key={event.id}
-            onClick={() => onSelect(event.id)}
-            className={cn(
-              'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-              event.id === selectedId && 'bg-accent',
-            )}
-          >
-            <span className="font-medium">{formatEventWeek(event.event_date)}</span>
-            <span className="flex shrink-0 items-center gap-2">
-              <span className="text-muted-foreground">{event.guess_count}</span>
-              <StatusBadge status={event.status} />
-            </span>
-          </button>
-        ))}
-      </CardContent>
-    </Card>
+    <button
+      onClick={() => onSelect(event.id)}
+      className={cn(
+        'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
+        selected && 'bg-accent',
+      )}
+    >
+      <span className="font-medium">{formatEventWeek(event.event_date)}</span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-muted-foreground">{event.guess_count}</span>
+        {live ? <Badge variant="success">Live</Badge> : <StatusBadge status={event.status} />}
+      </span>
+    </button>
+  );
+}
+
+// This week's event is pinned in its own card above the past ones — it's the
+// one an admin acts on every Friday, so it shouldn't be just another row.
+function EventList({ events, current, selectedId, onSelect }) {
+  const currentEvent = current ? events.find((e) => e.id === current.id) : null;
+  const pastEvents = events.filter((e) => e.id !== currentEvent?.id);
+
+  return (
+    <div className="space-y-4">
+      <Card className={cn(current?.isOpen && 'border-success/50 ring-1 ring-success/30')}>
+        <CardHeader>
+          <CardTitle>This week</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {currentEvent ? (
+            <EventRow
+              event={currentEvent}
+              selected={currentEvent.id === selectedId}
+              onSelect={onSelect}
+              live={current.isOpen}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">No event for this week yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Past events</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {pastEvents.length === 0 && <p className="text-sm text-muted-foreground">No past fika events yet.</p>}
+          {pastEvents.map((event) => (
+            <EventRow key={event.id} event={event} selected={event.id === selectedId} onSelect={onSelect} />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -443,6 +473,7 @@ export function AdminEventsTab() {
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [current, setCurrent] = useState(null);
   const [confirmingFinalize, setConfirmingFinalize] = useState(false);
   const [confirmingReopen, setConfirmingReopen] = useState(false);
   const [confirmingDeleteEvent, setConfirmingDeleteEvent] = useState(false);
@@ -450,7 +481,15 @@ export function AdminEventsTab() {
   const refreshEvents = () => api.get('/api/admin/events').then(setEvents);
 
   useEffect(() => {
-    refreshEvents();
+    // Fetched before the list so this week's event exists (it's created on
+    // demand) and can be pre-selected — it's what an admin is here for.
+    api
+      .get('/api/fika/current')
+      .then((event) => {
+        setCurrent(event);
+        setSelectedId((id) => id ?? event.id);
+      })
+      .finally(refreshEvents);
     api.get('/api/fika/categories').then(setCategories);
     api.get('/api/admin/users').then(setUsers);
   }, []);
@@ -489,7 +528,7 @@ export function AdminEventsTab() {
 
   return (
     <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-      <EventList events={events} selectedId={selectedId} onSelect={setSelectedId} />
+      <EventList events={events} current={current} selectedId={selectedId} onSelect={setSelectedId} />
 
       {selected ? (
         <div className="space-y-4">

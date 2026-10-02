@@ -16,8 +16,10 @@ export async function findOrCreateCurrentEvent() {
 
   let event = await findEventByDate(eventDate);
   if (!event) {
+    // INSERT IGNORE: the scheduler and a player's request can race to create
+    // the same week's row — the unique event_date key keeps exactly one.
     await pool.query(
-      'INSERT INTO fika_events (event_date, opens_at, closes_at) VALUES (?, ?, ?)',
+      'INSERT IGNORE INTO fika_events (event_date, opens_at, closes_at) VALUES (?, ?, ?)',
       [eventDate, opensAt, closesAt],
     );
     event = await findEventByDate(eventDate);

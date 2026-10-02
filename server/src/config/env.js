@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -10,7 +11,12 @@ import dotenv from 'dotenv';
 // location instead, so it works the same regardless of where it's invoked
 // from. Docker doesn't go through this at all (env vars come from
 // `--env-file`/the platform directly), so this only affects local dev.
-dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env') });
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(configDir, '../../../.env') });
+
+// Jenkins stamps each image with APP_VERSION (build number + git sha); local
+// dev has no such stamp, so fall back to server/package.json's version.
+const packageVersion = JSON.parse(readFileSync(path.resolve(configDir, '../../package.json'), 'utf8')).version;
 
 function required(name, fallback) {
   const value = process.env[name] ?? fallback;
@@ -22,6 +28,7 @@ function required(name, fallback) {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
+  appVersion: process.env.APP_VERSION || packageVersion,
   port: Number(process.env.PORT ?? 3001),
   corsOrigins: required('CORS_ORIGIN', 'http://localhost:5173').split(',').map((s) => s.trim()),
 

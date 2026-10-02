@@ -32,6 +32,11 @@ ARG VITE_API_URL=""
 ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+# Build stamp shown in the UI footer (e.g. "42-abc1234" from Jenkins). Empty
+# falls back to package.json's version. Re-declared in the runtime stage so
+# the API reports the same value from /api/version.
+ARG APP_VERSION=""
+ENV APP_VERSION=${APP_VERSION}
 RUN NODE_ENV=development npm run build --workspace web
 
 RUN npm prune --omit=dev
@@ -41,6 +46,8 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=1167
+ARG APP_VERSION=""
+ENV APP_VERSION=${APP_VERSION}
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json

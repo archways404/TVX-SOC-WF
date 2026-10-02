@@ -3,6 +3,7 @@ import { Coffee, History, LogOut, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { VersionFooter } from '@/components/VersionFooter';
 import { cn, formatShortName } from '@/lib/utils';
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
@@ -116,6 +117,7 @@ export default function App() {
           </Route>
         </Routes>
       </main>
+      <VersionFooter />
     </div>
   );
 }
