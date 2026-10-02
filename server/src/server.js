@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import { env } from './config/env.js';
+import { startFikaScheduler } from './services/fikaScheduler.js';
 
 const app = await buildApp();
 
@@ -9,3 +10,5 @@ try {
   app.log.error(err);
   process.exit(1);
 }
+
+startFikaScheduler(app.log);

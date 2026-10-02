@@ -16,18 +16,15 @@ function windowFor(fridayStockholmMidnight) {
 }
 
 /**
- * Resolves the fika event that "now" should be shown: the current week's
- * Friday while its window hasn't closed yet, otherwise next week's Friday.
+ * Resolves the fika event that "now" belongs to: the Friday of the current
+ * Stockholm week (Monday–Sunday). It deliberately does not roll over to next
+ * week once the window closes — this Friday's event stays current through the
+ * weekend so players can still see their guess and the reveal, and the admin
+ * always has that Friday's event to grade.
  */
 export function resolveCurrentEventDate(now = new Date()) {
-  let friday = stockholmFridayOfWeek(now);
-  let { opensAt, closesAt } = windowFor(friday);
-  const nowDt = DateTime.fromJSDate(now, { zone: 'utc' });
-
-  if (nowDt >= closesAt) {
-    friday = friday.plus({ weeks: 1 });
-    ({ opensAt, closesAt } = windowFor(friday));
-  }
+  const friday = stockholmFridayOfWeek(now);
+  const { opensAt, closesAt } = windowFor(friday);
 
   return {
     eventDate: friday.toISODate(),

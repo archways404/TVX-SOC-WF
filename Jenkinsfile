@@ -63,6 +63,7 @@ pipeline {
                     docker build \\
                         --build-arg VITE_API_URL=${VITE_API_URL} \\
                         --build-arg VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} \\
+                        --build-arg APP_VERSION=${IMAGE_TAG} \\
                         -t ${IMAGE}:${IMAGE_TAG} \\
                         -t ${IMAGE}:latest \\
                         .

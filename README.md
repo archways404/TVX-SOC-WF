@@ -66,9 +66,19 @@ running leaderboard.
 
 ## How it works
 
-- The current week's fika event (and its 08:00–close Stockholm guessing
-  window) is created lazily the first time it's requested — no cron job
-  needed. Window length is `FIKA_GUESS_WINDOW_MINUTES` (default 120).
+- Each week's fika event (and its Friday 08:00–close Stockholm guessing
+  window) is created automatically: the server checks every 15 minutes (and
+  on boot) and creates the current week's event if it doesn't exist yet, so
+  a new event shows up shortly after Monday 00:00 Stockholm without anyone
+  visiting the app. Window length is `FIKA_GUESS_WINDOW_MINUTES` (default
+  120). After the window closes, that Friday stays the "current" event
+  through Sunday, so players still see their guess and the reveal; Monday
+  rolls over to the next Friday.
+- While a window is open, the home page switches to a full-width "Fika is
+  live" card with a countdown to close (the leaderboard moves below it); it
+  flips on its own at 08:00 if the tab is already open. On `/admin`, this
+  week's event is pinned in its own "This week" card above past events and
+  is selected by default.
 - Players submit one guess per event: a category (cookie, bread/doughy, cake,
   pastry, fruit, candy, other — editable in `fika_categories`) plus free-text
   description. Guesses can be updated until the window closes.
@@ -195,6 +205,12 @@ Fastify process on one port (`1167`):
 docker build -t fika-friday .
 docker run --env-file .env -e PORT=1167 -p 1167:1167 fika-friday
 ```
+
+Pass `--build-arg APP_VERSION=<tag>` to stamp the build — the page footer
+shows it in green as both the UI version (baked into the bundle) and the API
+version (`GET /api/version`), so a mismatch means a stale cached frontend.
+Jenkins passes its image tag (`<build number>-<git sha>`); without it both
+fall back to `package.json`'s version.
 
 The `.env` file needs the same variables as local dev (DB connection,
 `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_DOMAIN`, `JWT_SECRET`, `ADMIN_EMAILS`) —
