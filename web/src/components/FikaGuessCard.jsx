@@ -125,6 +125,8 @@ export function FikaGuessCard() {
               <p className="mt-1 text-muted-foreground">Points awarded: {event.myGuess.pointsAwarded}</p>
             )}
           </div>
+        ) : new Date() >= new Date(event.closesAt) ? (
+          <p className="text-sm text-muted-foreground">Guessing has closed for this week — next round opens Friday at 08:00.</p>
         ) : (
           <p className="text-sm text-muted-foreground">Guessing isn't open yet — check back Friday at 08:00.</p>
         )}

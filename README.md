@@ -65,9 +65,14 @@ running leaderboard.
 
 ## How it works
 
-- The current week's fika event (and its 08:00–close Stockholm guessing
-  window) is created lazily the first time it's requested — no cron job
-  needed. Window length is `FIKA_GUESS_WINDOW_MINUTES` (default 120).
+- Each week's fika event (and its Friday 08:00–close Stockholm guessing
+  window) is created automatically: the server checks every 15 minutes (and
+  on boot) and creates the current week's event if it doesn't exist yet, so
+  a new event shows up shortly after Monday 00:00 Stockholm without anyone
+  visiting the app. Window length is `FIKA_GUESS_WINDOW_MINUTES` (default
+  120). After the window closes, that Friday stays the "current" event
+  through Sunday, so players still see their guess and the reveal; Monday
+  rolls over to the next Friday.
 - Players submit one guess per event: a category (cookie, bread/doughy, cake,
   pastry, fruit, candy, other — editable in `fika_categories`) plus free-text
   description. Guesses can be updated until the window closes.
