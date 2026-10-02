@@ -82,7 +82,9 @@ function AdjustmentRow({ adjustment, onDeleted }) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{adjustment.user_name}</TableCell>
+      <TableCell className="font-medium">
+        <span className={cn(adjustment.glitter && 'glitter-text')}>{adjustment.user_name}</span>
+      </TableCell>
       <TableCell>
         <span className={cn('inline-flex items-center gap-1 font-semibold', positive ? 'text-success' : 'text-destructive')}>
           {positive ? <PlusCircle className="h-3.5 w-3.5" /> : <MinusCircle className="h-3.5 w-3.5" />}
@@ -159,7 +161,9 @@ export function AdminPlayersTab() {
               <TableBody>
                 {leaderboard.map((row) => (
                   <TableRow key={row.userId}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className={cn(row.glitter && 'glitter-text')}>{row.name}</span>
+                    </TableCell>
                     <TableCell className="text-right font-semibold">{row.totalPoints}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{row.guessesMade}</TableCell>
                   </TableRow>

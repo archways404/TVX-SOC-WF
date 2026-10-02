@@ -1,9 +1,20 @@
 import { verifyGoogleIdToken } from '../auth/verifyGoogleToken.js';
-import { upsertGoogleUser, getUserById } from '../services/userService.js';
+import { upsertGoogleUser, getUserById, hasGlitter } from '../services/userService.js';
 import { env } from '../config/env.js';
 
 const COOKIE_NAME = 'fika_session';
 const COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+function toSessionUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatar_url,
+    role: user.role,
+    glitter: hasGlitter(user.email),
+  };
+}
 
 export default async function authRoutes(fastify) {
   fastify.post('/api/auth/google', async (request, reply) => {
@@ -34,13 +45,13 @@ export default async function authRoutes(fastify) {
       maxAge: COOKIE_MAX_AGE_SECONDS,
     });
 
-    return { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatar_url, role: user.role };
+    return toSessionUser(user);
   });
 
   fastify.get('/api/auth/me', { preHandler: fastify.authenticate }, async (request, reply) => {
     const user = await getUserById(request.user.id);
     if (!user) return reply.code(401).send({ error: 'Unauthorized' });
-    return { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatar_url, role: user.role };
+    return toSessionUser(user);
   });
 
   fastify.post('/api/auth/logout', async (request, reply) => {

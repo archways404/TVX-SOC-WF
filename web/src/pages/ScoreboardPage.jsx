@@ -6,21 +6,30 @@ import { Avatar } from '@/components/ui/avatar';
 
 const CONFETTI_COLORS = ['#facc15', '#22c55e', '#f97316', '#e2e8f0', '#34d399'];
 const REFRESH_MS = 60_000;
+const CONFETTI_START_S = 1.1; // lands with the champion's rise-in
+const CONFETTI_SHOWER_S = 30;
 
 // Confetti only rains on 1st place — randomized once per mount so it doesn't
-// re-shuffle on every background leaderboard refresh.
-function useConfetti(count = 22) {
+// re-shuffle on every background leaderboard refresh. Each piece starts at a
+// staggered moment and loops enough times to keep the shower going for about
+// CONFETTI_SHOWER_S seconds, rather than one short burst.
+function useConfetti(count = 48) {
 	return useMemo(
 		() =>
-			Array.from({ length: count }, (_, i) => ({
-				id: i,
-				left: Math.random() * 100,
-				delay: 1.1 + Math.random() * 0.6,
-				duration: 1.6 + Math.random() * 0.9,
-				color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-				size: 6 + Math.random() * 5,
-				rotate: Math.random() * 360,
-			})),
+			Array.from({ length: count }, (_, i) => {
+				const stagger = Math.random() * 3;
+				const duration = 2 + Math.random() * 1.5;
+				return {
+					id: i,
+					left: Math.random() * 100,
+					delay: CONFETTI_START_S + stagger,
+					duration,
+					iterations: Math.max(1, Math.floor((CONFETTI_SHOWER_S - stagger) / duration)),
+					color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+					size: 6 + Math.random() * 5,
+					rotate: Math.random() * 360,
+				};
+			}),
 		[count],
 	);
 }
@@ -31,7 +40,7 @@ function ChampionSpot({ row }) {
 
 	return (
 		<div className="animate-podium-1 relative flex flex-1 flex-col items-center gap-3">
-			<div className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden">
+			<div className="pointer-events-none absolute inset-x-0 top-0 h-64 overflow-hidden">
 				{confetti.map((p) => (
 					<span
 						key={p.id}
@@ -43,13 +52,18 @@ function ChampionSpot({ row }) {
 							backgroundColor: p.color,
 							animationDelay: `${p.delay}s`,
 							animationDuration: `${p.duration}s`,
+							animationIterationCount: p.iterations,
 							transform: `rotate(${p.rotate}deg)`,
 						}}
 					/>
 				))}
 			</div>
 			<Crown className="h-8 w-8 text-amber-400" />
-			<div className="animate-champion-glow flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-amber-300 to-amber-500 text-4xl font-bold text-amber-950 ring-4 ring-amber-300/70 ring-offset-4 ring-offset-background sm:h-36 sm:w-36">
+			<div
+				className={cn(
+					'animate-champion-glow flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-amber-300 to-amber-500 text-4xl font-bold text-amber-950 ring-4 ring-amber-300/70 ring-offset-4 ring-offset-background sm:h-36 sm:w-36',
+					row.glitter && 'glitter-avatar',
+				)}>
 				<Avatar
 					name={row.name}
 					src={row.avatarUrl}
@@ -57,7 +71,7 @@ function ChampionSpot({ row }) {
 				/>
 			</div>
 			<div className="text-center">
-				<p className="text-xl font-bold sm:text-2xl">{row.name}</p>
+				<p className={cn('text-xl font-bold sm:text-2xl', row.glitter && 'glitter-text')}>{row.name}</p>
 				<p className="text-lg font-semibold text-primary">{row.totalPoints} pts</p>
 			</div>
 		</div>
@@ -92,6 +106,7 @@ function RunnerUpSpot({ row, place }) {
 					badge,
 					ring,
 					size,
+					row.glitter && 'glitter-avatar',
 				)}>
 				<Avatar
 					name={row.name}
@@ -100,7 +115,7 @@ function RunnerUpSpot({ row, place }) {
 				/>
 			</div>
 			<div className="text-center">
-				<p className={nameClass}>{row.name}</p>
+				<p className={cn(nameClass, row.glitter && 'glitter-text')}>{row.name}</p>
 				<p className="text-sm text-muted-foreground">{row.totalPoints} pts</p>
 			</div>
 		</div>
@@ -164,14 +179,18 @@ export function ScoreboardPage() {
 							className="flex items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-accent/40">
 							<span className="flex items-center gap-3">
 								<span className="w-5 text-muted-foreground">{row.rank}</span>
-								<span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+								<span
+									className={cn(
+										'flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground',
+										row.glitter && 'glitter-avatar',
+									)}>
 									<Avatar
 										name={row.name}
 										src={row.avatarUrl}
 										size={64}
 									/>
 								</span>
-								<span>{row.name}</span>
+								<span className={cn(row.glitter && 'glitter-text')}>{row.name}</span>
 							</span>
 							<span className="text-muted-foreground">{row.totalPoints} pts</span>
 						</div>

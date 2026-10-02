@@ -8,6 +8,7 @@ import {
   listGuessesForEvent,
 } from '../services/fikaService.js';
 import { isWithinWindow } from '../utils/time.js';
+import { hasGlitter } from '../services/userService.js';
 
 // Correctness and points are meaningless (NULL/0) until the admin reveals the
 // answer, so they're sent as null before then rather than as a misleading 0.
@@ -16,6 +17,7 @@ function toPublicGuess(guess, { viewerId, revealed }) {
     userId: guess.user_id,
     userName: guess.user_name,
     avatarUrl: guess.user_avatar_url,
+    glitter: hasGlitter(guess.user_email),
     isMe: guess.user_id === viewerId,
     categoryId: guess.category_id,
     categoryLabel: guess.category_label,

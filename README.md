@@ -106,6 +106,12 @@ running leaderboard.
   and everyone outside the top 3 listed plainly below. It polls
   `/api/leaderboard` every 60s so a screen left open stays current without
   replaying the entrance animation.
+- Players listed in `GLITTER_EMAILS` (comma-separated, defaults to
+  `alice.linder@telavox.se`; set it empty to disable) get a shimmering
+  name and a sparkling, glowing profile photo everywhere they appear —
+  scoreboard, leaderboard, guess cards, history, the admin tables and the
+  nav. The server sends a `glitter: true` flag rather than the email, so
+  public endpoints still never expose addresses.
 - `/history` shows everyone's guess for each revealed week, not just your
   own — an expandable table per event with player, category, guess text,
   correctness, and points, sorted best-score-first.

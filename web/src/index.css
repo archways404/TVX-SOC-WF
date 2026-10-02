@@ -96,13 +96,20 @@
   }
 }
 
+/* Each piece loops this many times (set inline from ScoreboardPage) so the
+   shower keeps going for ~30s instead of one quick burst. Starts and ends
+   invisible so pieces don't hang at the top before their first drop. */
 @keyframes confetti-fall {
   0% {
     transform: translateY(-10px) rotate(0deg);
+    opacity: 0;
+  }
+  8%,
+  80% {
     opacity: 1;
   }
   100% {
-    transform: translateY(160px) rotate(420deg);
+    transform: translateY(260px) rotate(540deg);
     opacity: 0;
   }
 }
@@ -135,11 +142,116 @@
 }
 
 .animate-confetti {
-  animation: confetti-fall linear forwards;
+  opacity: 0;
+  animation: confetti-fall linear both;
 }
 
 .animate-rest {
   animation: fade-in-up 0.5s ease-out 1.9s both;
+}
+
+/* Glitter — for the players listed in GLITTER_EMAILS (server flags them with
+   `glitter: true`). .glitter-text shimmers a name in gold/pink/violet with a
+   twinkling sparkle; .glitter-avatar goes on the round photo container and
+   adds a colour-cycling halo plus sparkles over the photo. The halo uses
+   filter, not box-shadow, so it stacks with ring-* and champion-glow. */
+@keyframes glitter-shift {
+  to {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes glitter-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(90deg);
+  }
+}
+
+@keyframes glitter-halo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgb(253 224 71 / 0.9)) drop-shadow(0 0 10px rgb(244 114 182 / 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgb(244 114 182 / 0.9)) drop-shadow(0 0 14px rgb(167 139 250 / 0.7));
+  }
+}
+
+@keyframes glitter-sparkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.glitter-text {
+  position: relative;
+  background-image: linear-gradient(90deg, #f59e0b, #fde68a, #f472b6, #a78bfa, #fde68a, #f59e0b);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: glitter-shift 4s linear infinite;
+}
+
+.glitter-text::after {
+  content: '✦';
+  position: absolute;
+  top: -0.45em;
+  right: -0.7em;
+  font-size: 0.65em;
+  line-height: 1;
+  color: #fde68a;
+  -webkit-text-fill-color: #fde68a;
+  pointer-events: none;
+  animation: glitter-twinkle 1.6s ease-in-out infinite;
+}
+
+.glitter-avatar {
+  position: relative;
+  animation: glitter-halo 2.6s ease-in-out infinite;
+}
+
+.glitter-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 18% 28%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 72% 18%, #fde68a 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 82% 64%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 78%, #f9a8d4 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 55% 45%, #fff 0 1px, transparent 2px);
+  mix-blend-mode: screen;
+  animation: glitter-sparkle 1.4s ease-in-out infinite;
+}
+
+/* The champion medallion already animates box-shadow; combine both. */
+.animate-champion-glow.glitter-avatar {
+  animation:
+    champion-glow 2.4s ease-in-out 1.8s infinite,
+    glitter-halo 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitter-text,
+  .glitter-text::after,
+  .glitter-avatar,
+  .glitter-avatar::after {
+    animation: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -52,6 +52,14 @@ export const env = {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean),
 
+  // Players whose name and photo get the glitter treatment everywhere in the
+  // UI. Comma-separated like ADMIN_EMAILS; set it to an empty string to turn
+  // the effect off for everyone.
+  glitterEmails: (process.env.GLITTER_EMAILS ?? 'alice.linder@telavox.se')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+
   fikaGuessWindowMinutes: Number(process.env.FIKA_GUESS_WINDOW_MINUTES ?? 120),
 
   n8nGradeWebhookUrl: process.env.N8N_GRADE_WEBHOOK_URL || null,

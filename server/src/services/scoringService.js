@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { env } from '../config/env.js';
+import { hasGlitter } from './userService.js';
 
 function computePoints(event, guess) {
   let points = 0;
@@ -27,7 +28,7 @@ export async function getEventWithGuesses(eventId) {
     [eventId],
   );
 
-  return { event, guesses };
+  return { event, guesses: guesses.map((g) => ({ ...g, glitter: hasGlitter(g.user_email) })) };
 }
 
 export async function listEventsForAdmin() {

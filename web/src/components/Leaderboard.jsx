@@ -50,12 +50,13 @@ function PodiumSpot({ row, place }) {
           'flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-lg font-bold ring-4 ring-offset-2 ring-offset-background sm:h-16 sm:w-16 sm:text-xl',
           style.badge,
           style.ring,
+          row.glitter && 'glitter-avatar',
         )}
       >
         <Avatar name={row.name} src={row.avatarUrl} size={128} />
       </div>
       <div className="max-w-[6rem] text-center sm:max-w-[8rem]">
-        <p className="truncate text-sm font-semibold sm:text-base">{row.name}</p>
+        <p className={cn('truncate text-sm font-semibold sm:text-base', row.glitter && 'glitter-text')}>{row.name}</p>
         <p className="text-xs text-muted-foreground sm:text-sm">{row.totalPoints} pts</p>
       </div>
       <div
@@ -127,10 +128,15 @@ export function Leaderboard() {
                   <TableCell className="pl-4 text-muted-foreground">{row.rank}</TableCell>
                   <TableCell className="font-medium">
                     <span className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                      <span
+                        className={cn(
+                          'flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground',
+                          row.glitter && 'glitter-avatar',
+                        )}
+                      >
                         <Avatar name={row.name} src={row.avatarUrl} size={64} />
                       </span>
-                      {row.name}
+                      <span className={cn(row.glitter && 'glitter-text')}>{row.name}</span>
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{row.totalPoints}</TableCell>

@@ -74,7 +74,9 @@ function EventHistoryCard({ event }) {
                 <TableBody>
                   {guesses.map((g) => (
                     <TableRow key={g.userId} className={cn(g.isMe && 'bg-accent/40')}>
-                      <TableCell className="font-medium">{g.isMe ? 'You' : g.userName}</TableCell>
+                      <TableCell className="font-medium">
+                        <span className={cn(g.glitter && 'glitter-text')}>{g.isMe ? 'You' : g.userName}</span>
+                      </TableCell>
                       <TableCell>{g.categoryLabel ?? '—'}</TableCell>
                       <TableCell className="max-w-[14rem] truncate">{g.description}</TableCell>
                       <TableCell>

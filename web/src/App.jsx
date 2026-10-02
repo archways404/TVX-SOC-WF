@@ -70,10 +70,15 @@ function Nav() {
           {user && (
             <>
               <span className="hidden items-center gap-2 text-sm font-medium sm:flex">
-                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                <span
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground',
+                    user.glitter && 'glitter-avatar',
+                  )}
+                >
                   <Avatar name={user.name} src={user.avatarUrl} size={64} />
                 </span>
-                {formatShortName(user.name)}
+                <span className={cn(user.glitter && 'glitter-text')}>{formatShortName(user.name)}</span>
               </span>
               <Button variant="outline" size="sm" onClick={logout} className="gap-1.5">
                 <LogOut className="h-3.5 w-3.5" />

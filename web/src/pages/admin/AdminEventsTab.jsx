@@ -299,7 +299,9 @@ function GuessRow({ eventId, guess, categories, onGraded }) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{guess.user_name}</TableCell>
+      <TableCell className="font-medium">
+        <span className={cn(guess.glitter && 'glitter-text')}>{guess.user_name}</span>
+      </TableCell>
       <TableCell>
         {editing ? (
           <Select value={editCategoryId} onChange={(e) => setEditCategoryId(e.target.value)} className="h-9 min-w-[9rem]">

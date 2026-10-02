@@ -43,13 +43,14 @@ const PLAYER_AVATAR_SIZE = {
  * background ring lets several of them overlap in a stack (-space-x-2) and
  * still read as separate faces.
  */
-export function PlayerAvatar({ name, src, size = 'sm', className }) {
+export function PlayerAvatar({ name, src, size = 'sm', glitter = false, className }) {
   return (
     <span className={cn('group/avatar relative inline-flex', className)} role="img" aria-label={name}>
       <span
         className={cn(
           'flex items-center justify-center overflow-hidden rounded-full bg-muted font-semibold text-muted-foreground ring-2 ring-background',
           PLAYER_AVATAR_SIZE[size],
+          glitter && 'glitter-avatar',
         )}
       >
         <Avatar name={name} src={src} size={96} />

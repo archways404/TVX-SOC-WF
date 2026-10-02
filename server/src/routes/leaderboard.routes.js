@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js';
+import { hasGlitter } from '../services/userService.js';
 
 export default async function leaderboardRoutes(fastify) {
   // Public on purpose: the leaderboard is shown on the login screen so
@@ -8,9 +9,11 @@ export default async function leaderboardRoutes(fastify) {
     // guarantee a view's own ORDER BY survives being selected from (MariaDB
     // drops it), which put the wrong players on the podium.
     const [rows] = await pool.query(
-      `SELECT user_id, name, avatar_url, total_points, guesses_made, category_correct_count, description_correct_count
-       FROM leaderboard
-       ORDER BY total_points DESC, name ASC`,
+      `SELECT l.user_id, l.name, l.avatar_url, l.total_points, l.guesses_made,
+              l.category_correct_count, l.description_correct_count, u.email
+       FROM leaderboard l
+       JOIN users u ON u.id = l.user_id
+       ORDER BY l.total_points DESC, l.name ASC`,
     );
     // Rank is plain position (1st, 2nd, 3rd, 4th…) — players on equal points
     // are ordered by name rather than sharing a place. SUM() columns come back
@@ -20,6 +23,7 @@ export default async function leaderboardRoutes(fastify) {
       userId: row.user_id,
       name: row.name,
       avatarUrl: row.avatar_url,
+      glitter: hasGlitter(row.email),
       totalPoints: Number(row.total_points),
       guessesMade: Number(row.guesses_made),
       categoryCorrectCount: Number(row.category_correct_count),

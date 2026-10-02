@@ -88,7 +88,7 @@ export async function submitGuess({ eventId, userId, categoryId, description }) 
  */
 export async function listGuessesForEvent(eventId) {
   const [rows] = await pool.query(
-    `SELECT g.id, g.user_id, u.name AS user_name, u.avatar_url AS user_avatar_url,
+    `SELECT g.id, g.user_id, u.name AS user_name, u.avatar_url AS user_avatar_url, u.email AS user_email,
             g.category_id, c.label AS category_label, g.description,
             g.category_correct, g.description_correct, g.points_awarded, g.submitted_at
      FROM guesses g

@@ -5,6 +5,15 @@ function isAdminEmail(email) {
   return env.adminEmails.includes(email.toLowerCase());
 }
 
+/**
+ * Whether this player gets the glitter effect on their name and photo.
+ * Exposed to the client as a plain boolean so public payloads never need to
+ * carry anyone's email address.
+ */
+export function hasGlitter(email) {
+  return Boolean(email) && env.glitterEmails.includes(email.toLowerCase());
+}
+
 export async function upsertGoogleUser({ googleSub, email, name, avatarUrl }) {
   await pool.query(
     `INSERT INTO users (google_sub, email, name, avatar_url, role, last_login_at)
@@ -31,5 +40,5 @@ export async function getUserById(id) {
 
 export async function listUsers() {
   const [rows] = await pool.query('SELECT id, name, email, avatar_url, role FROM users ORDER BY name ASC');
-  return rows;
+  return rows.map((row) => ({ ...row, glitter: hasGlitter(row.email) }));
 }
