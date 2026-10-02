@@ -42,6 +42,10 @@ export async function buildApp() {
   // Load balancers/uptime pings that just want a fast 200 should use this.
   app.get('/api/health', async () => ({ ok: true }));
 
+  // Public on purpose — the UI footer shows it next to its own build version,
+  // which makes a stale cached frontend vs. a freshly deployed API obvious.
+  app.get('/api/version', async () => ({ version: env.appVersion }));
+
   // Readiness — also confirms the database is actually reachable, since
   // that's the thing most likely to silently fail while the Node process
   // itself stays up and keeps returning a happy /api/health. Point

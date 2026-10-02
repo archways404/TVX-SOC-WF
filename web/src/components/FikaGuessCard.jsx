@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Coffee } from 'lucide-react';
+import { Coffee, Timer } from 'lucide-react';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,18 +17,48 @@ function formatTime(iso) {
   });
 }
 
-export function FikaGuessCard() {
-  const [event, setEvent] = useState(null);
+// 93 minutes -> "1h 33m", 2 days -> "2d 0h" — coarse on purpose, it ticks every 30s.
+function formatCountdown(ms) {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60_000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return minutes > 0 ? `${minutes}m` : 'less than a minute';
+}
+
+function WindowDescription({ event, now }) {
+  const opensAt = new Date(event.opensAt);
+  const closesAt = new Date(event.closesAt);
+
+  if (event.isOpen) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <Timer className="h-3.5 w-3.5" />
+        Closes in <span className="font-semibold text-foreground">{formatCountdown(closesAt - now)}</span>
+        <span className="text-muted-foreground">({formatTime(event.closesAt)})</span>
+      </span>
+    );
+  }
+  if (now < opensAt) {
+    return (
+      <span>
+        Opens in {formatCountdown(opensAt - now)} · {formatTime(event.opensAt)} – {formatTime(event.closesAt)}
+      </span>
+    );
+  }
+  return <span>Guessing window: {formatTime(event.opensAt)} – {formatTime(event.closesAt)}</span>;
+}
+
+export function FikaGuessCard({ event, error: loadError, now, onEventChange }) {
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = () => api.get('/api/fika/current').then(setEvent);
-
   useEffect(() => {
-    load().catch((err) => setError(err.message));
     api.get('/api/fika/categories').then(setCategories);
   }, []);
 
@@ -47,7 +78,7 @@ export function FikaGuessCard() {
         categoryId: categoryId ? Number(categoryId) : null,
         description,
       });
-      setEvent(updated);
+      onEventChange(updated);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -59,25 +90,37 @@ export function FikaGuessCard() {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-          <Coffee className="h-4 w-4 animate-pulse" />
-          Loading this week's fika…
+          <Coffee className={cn('h-4 w-4', !loadError && 'animate-pulse')} />
+          {loadError ? `Couldn't load this week's fika: ${loadError}` : "Loading this week's fika…"}
         </CardContent>
       </Card>
     );
   }
 
+  const live = event.isOpen;
+
   return (
-    <Card>
+    <Card className={cn(live && 'border-success/50 bg-success/5 shadow-lg ring-1 ring-success/30')}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Coffee className="h-4 w-4 text-primary" />
-            <CardTitle>This week's fika</CardTitle>
+            <Coffee className={cn('text-primary', live ? 'h-5 w-5' : 'h-4 w-4')} />
+            <CardTitle className={cn(live && 'text-2xl')}>{live ? 'Fika is live — get your guess in!' : "This week's fika"}</CardTitle>
           </div>
-          <Badge variant={event.isOpen ? 'success' : 'secondary'}>{event.isOpen ? 'Open' : 'Closed'}</Badge>
+          {live ? (
+            <Badge variant="success" className="gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Live
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Closed</Badge>
+          )}
         </div>
         <CardDescription>
-          Guessing window: {formatTime(event.opensAt)} – {formatTime(event.closesAt)}
+          <WindowDescription event={event} now={now} />
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -88,34 +131,41 @@ export function FikaGuessCard() {
           </div>
         )}
 
-        {event.isOpen ? (
+        {live ? (
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="category">Type of fika</Label>
-              <Select id="category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                <option value="">Pick one…</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Full guess</Label>
-              <Input
-                id="description"
-                placeholder='e.g. "Cinnamon buns"'
-                value={description}
-                maxLength={255}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-              />
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <div className="space-y-1.5">
+                <Label htmlFor="category">Type of fika</Label>
+                <Select id="category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="">Pick one…</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="description">Full guess</Label>
+                <Input
+                  id="description"
+                  placeholder='e.g. "Cinnamon buns"'
+                  value={description}
+                  maxLength={255}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={submitting}>
-              {event.myGuess ? 'Update guess' : 'Submit guess'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={submitting}>
+                {event.myGuess ? 'Update guess' : 'Submit guess'}
+              </Button>
+              {event.myGuess && (
+                <span className="text-sm text-muted-foreground">Saved — you can change it until the window closes.</span>
+              )}
+            </div>
           </form>
         ) : event.myGuess ? (
           <div className="text-sm">
@@ -125,7 +175,7 @@ export function FikaGuessCard() {
               <p className="mt-1 text-muted-foreground">Points awarded: {event.myGuess.pointsAwarded}</p>
             )}
           </div>
-        ) : new Date() >= new Date(event.closesAt) ? (
+        ) : now >= new Date(event.closesAt) ? (
           <p className="text-sm text-muted-foreground">Guessing has closed for this week — next round opens Friday at 08:00.</p>
         ) : (
           <p className="text-sm text-muted-foreground">Guessing isn't open yet — check back Friday at 08:00.</p>
