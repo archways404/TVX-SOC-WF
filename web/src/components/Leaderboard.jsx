@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 
 const PODIUM_STYLE = {
@@ -46,12 +47,12 @@ function PodiumSpot({ row, place }) {
       <Icon className={cn('h-5 w-5', style.label)} />
       <div
         className={cn(
-          'flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold ring-4 ring-offset-2 ring-offset-background sm:h-16 sm:w-16 sm:text-xl',
+          'flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-lg font-bold ring-4 ring-offset-2 ring-offset-background sm:h-16 sm:w-16 sm:text-xl',
           style.badge,
           style.ring,
         )}
       >
-        {row.name.charAt(0).toUpperCase()}
+        <Avatar name={row.name} src={row.avatarUrl} size={128} />
       </div>
       <div className="max-w-[6rem] text-center sm:max-w-[8rem]">
         <p className="truncate text-sm font-semibold sm:text-base">{row.name}</p>
@@ -124,7 +125,14 @@ export function Leaderboard() {
               {rest.map((row) => (
                 <TableRow key={row.userId} className={row.userId === user?.id ? 'bg-accent/50' : undefined}>
                   <TableCell className="pl-4 text-muted-foreground">{row.rank}</TableCell>
-                  <TableCell className="font-medium">{row.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                        <Avatar name={row.name} src={row.avatarUrl} size={64} />
+                      </span>
+                      {row.name}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right font-semibold">{row.totalPoints}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{row.guessesMade}</TableCell>
                 </TableRow>

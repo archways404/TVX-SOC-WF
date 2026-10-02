@@ -17,7 +17,7 @@ export function VersionFooter() {
   }, []);
 
   return (
-    <footer className="container pb-6 pt-2">
+    <footer className="container py-3">
       <p className="flex flex-wrap justify-center gap-x-3 font-mono text-xs text-success">
         <span>UI {UI_VERSION}</span>
         <span className="text-muted-foreground">·</span>

@@ -9,6 +9,39 @@ import {
 } from '../services/fikaService.js';
 import { isWithinWindow } from '../utils/time.js';
 
+// Correctness and points are meaningless (NULL/0) until the admin reveals the
+// answer, so they're sent as null before then rather than as a misleading 0.
+function toPublicGuess(guess, { viewerId, revealed }) {
+  return {
+    userId: guess.user_id,
+    userName: guess.user_name,
+    avatarUrl: guess.user_avatar_url,
+    isMe: guess.user_id === viewerId,
+    categoryId: guess.category_id,
+    categoryLabel: guess.category_label,
+    description: guess.description,
+    submittedAt: guess.submitted_at,
+    categoryCorrect: revealed && guess.category_correct !== null ? Boolean(guess.category_correct) : null,
+    descriptionCorrect: revealed && guess.description_correct !== null ? Boolean(guess.description_correct) : null,
+    pointsAwarded: revealed ? guess.points_awarded : null,
+  };
+}
+
+// The current week's event plus everyone's guesses so far — players see who
+// has guessed what live, before and after locking in their own answer.
+async function describeCurrentEvent(event, viewerId) {
+  const [guess, allGuesses] = await Promise.all([
+    getUserGuessForEvent(event.id, viewerId),
+    listGuessesForEvent(event.id),
+  ]);
+  const described = describeEventForUser(event, guess);
+  const revealed = described.reveal !== null;
+  return {
+    ...described,
+    guesses: allGuesses.map((g) => toPublicGuess(g, { viewerId, revealed })),
+  };
+}
+
 export default async function fikaRoutes(fastify) {
   fastify.get('/api/fika/categories', async () => {
     return listCategories();
@@ -16,8 +49,7 @@ export default async function fikaRoutes(fastify) {
 
   fastify.get('/api/fika/current', { preHandler: fastify.authenticate }, async (request) => {
     const event = await findOrCreateCurrentEvent();
-    const guess = await getUserGuessForEvent(event.id, request.user.id);
-    return describeEventForUser(event, guess);
+    return describeCurrentEvent(event, request.user.id);
   });
 
   fastify.post('/api/fika/current/guess', { preHandler: fastify.authenticate }, async (request, reply) => {
@@ -38,8 +70,7 @@ export default async function fikaRoutes(fastify) {
       description: description.trim().slice(0, 255),
     });
 
-    const guess = await getUserGuessForEvent(event.id, request.user.id);
-    return describeEventForUser(event, guess);
+    return describeCurrentEvent(event, request.user.id);
   });
 
   fastify.get('/api/fika/history', { preHandler: fastify.authenticate }, async (request) => {
@@ -53,17 +84,7 @@ export default async function fikaRoutes(fastify) {
         const allGuesses = await listGuessesForEvent(event.id);
         return {
           ...described,
-          guesses: allGuesses.map((g) => ({
-            userId: g.user_id,
-            userName: g.user_name,
-            isMe: g.user_id === request.user.id,
-            categoryId: g.category_id,
-            categoryLabel: g.category_label,
-            description: g.description,
-            categoryCorrect: g.category_correct === null ? null : Boolean(g.category_correct),
-            descriptionCorrect: g.description_correct === null ? null : Boolean(g.description_correct),
-            pointsAwarded: g.points_awarded,
-          })),
+          guesses: allGuesses.map((g) => toPublicGuess(g, { viewerId: request.user.id, revealed: true })),
         };
       }),
     );

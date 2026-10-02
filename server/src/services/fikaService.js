@@ -80,15 +80,17 @@ export async function submitGuess({ eventId, userId, categoryId, description }) 
 }
 
 /**
- * Everyone's guesses for a revealed event — the player-facing "who guessed
- * what" view on /history. No email addresses here (unlike the admin
- * version), and ordered best-score-first so it reads like a mini leaderboard
- * for that week.
+ * Everyone's guesses for an event — the player-facing "who guessed what"
+ * view on the home page (current week, live) and /history. No email
+ * addresses here (unlike the admin version), and ordered best-score-first so
+ * a revealed week reads like a mini leaderboard; before the reveal every
+ * score is 0, so it's simply alphabetical.
  */
 export async function listGuessesForEvent(eventId) {
   const [rows] = await pool.query(
-    `SELECT g.id, g.user_id, u.name AS user_name, g.category_id, c.label AS category_label,
-            g.description, g.category_correct, g.description_correct, g.points_awarded
+    `SELECT g.id, g.user_id, u.name AS user_name, u.avatar_url AS user_avatar_url,
+            g.category_id, c.label AS category_label, g.description,
+            g.category_correct, g.description_correct, g.points_awarded, g.submitted_at
      FROM guesses g
      JOIN users u ON u.id = g.user_id
      LEFT JOIN fika_categories c ON c.id = g.category_id

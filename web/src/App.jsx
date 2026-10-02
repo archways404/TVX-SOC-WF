@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { VersionFooter } from '@/components/VersionFooter';
+import { Avatar } from '@/components/ui/avatar';
 import { cn, formatShortName } from '@/lib/utils';
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
@@ -68,7 +69,12 @@ function Nav() {
           <ThemeToggle />
           {user && (
             <>
-              <span className="hidden text-sm font-medium sm:inline">{formatShortName(user.name)}</span>
+              <span className="hidden items-center gap-2 text-sm font-medium sm:flex">
+                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                  <Avatar name={user.name} src={user.avatarUrl} size={64} />
+                </span>
+                {formatShortName(user.name)}
+              </span>
               <Button variant="outline" size="sm" onClick={logout} className="gap-1.5">
                 <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Sign out</span>
@@ -102,9 +108,12 @@ function Nav() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // Column layout so the version footer sits at the bottom of the viewport on
+    // short pages without adding scroll. dvh, not vh: mobile browser toolbars
+    // make 100vh taller than what's actually visible.
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <Nav />
-      <main className="container py-8">
+      <main className="container flex-1 py-8">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>

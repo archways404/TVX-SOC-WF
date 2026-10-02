@@ -4,6 +4,8 @@ import { useNow } from '@/lib/useNow';
 import { FikaGuessCard } from '@/components/FikaGuessCard';
 import { Leaderboard } from '@/components/Leaderboard';
 
+const LIVE_REFRESH_MS = 20_000;
+
 function isWindowOpen(event, now) {
   return now >= new Date(event.opensAt) && now < new Date(event.closesAt);
 }
@@ -26,6 +28,15 @@ export function HomePage() {
     load();
   }, [load]);
 
+  // While guessing is open, keep everyone's picks and guesses fresh so the
+  // category cards and the guess list update as people lock in.
+  const live = event?.isOpen ?? false;
+  useEffect(() => {
+    if (!live) return undefined;
+    const id = setInterval(load, LIVE_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [live, load]);
+
   // A tab left open from Thursday should switch to the live layout at 08:00
   // on its own — refetch once the clock crosses the window boundary.
   const boundaryPassed = event !== null && event.isOpen !== isWindowOpen(event, now);
@@ -33,7 +44,9 @@ export function HomePage() {
     if (boundaryPassed) load();
   }, [boundaryPassed, load]);
 
-  const card = <FikaGuessCard event={event} error={error} now={now} onEventChange={setEvent} />;
+  const card = (
+    <FikaGuessCard event={event} error={error} now={now} onEventChange={setEvent} onWindowElapsed={load} />
+  );
 
   // While guessing is open the round is the whole point of the page: give it
   // the full width up top instead of sharing a column with the leaderboard.
